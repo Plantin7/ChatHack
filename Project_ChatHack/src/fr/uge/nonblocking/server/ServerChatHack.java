@@ -15,6 +15,7 @@ import java.util.logging.Logger;
 import fr.uge.nonblocking.readers.Message;
 import fr.uge.nonblocking.readers.MessageReader;
 import fr.uge.nonblocking.readers.Reader;
+import fr.uge.nonblocking.utils.FileParser;
 
 public class ServerChatHack {
 
@@ -170,10 +171,11 @@ public class ServerChatHack {
 	private final Selector selector;
 	private SelectionKey serverKey;
 
-	public ServerChatHack(int port) throws IOException {
+	public ServerChatHack(int port, String filePath) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
 		serverSocketChannel.bind(new InetSocketAddress(port));
 		selector = Selector.open();
+		FileParser.parsePasswordFile(filePath, "$");
 	}
 
 	public void launch() throws IOException {
@@ -239,7 +241,6 @@ public class ServerChatHack {
 	 * @param msg
 	 */
 	private void broadcast(Message msg) {
-		// Parcourir tous les clients connectés (toute les clés) et aller leur mettre le message
 		for (var key : selector.keys()) { 
 			if(key.isValid() && key != serverKey) { // On ne veut pas du server
 				var context = (Context)key.attachment();
@@ -249,15 +250,15 @@ public class ServerChatHack {
 	}
 
 	public static void main(String[] args) throws NumberFormatException, IOException {
-		if (args.length!=1){
+		if (args.length != 2){
 			usage();
 			return;
 		}
-		new ServerChatHack(Integer.parseInt(args[0])).launch();
+		new ServerChatHack(Integer.parseInt(args[0]), args[1]).launch();
 	}
 
 	private static void usage(){
-		System.out.println("Usage : ServerSumBetter port");
+		System.out.println("Usage : ServerChatHack port passwordfile");
 	}
 
 	/***

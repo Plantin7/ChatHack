@@ -14,8 +14,6 @@ import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Logger;
 
-import fr.uge.nonblocking.readers.Message;
-import fr.uge.nonblocking.readers.MessageReader;
 import fr.uge.nonblocking.readers.Reader.ProcessStatus;
 import fr.uge.nonblocking.readers.ResponseServer;
 import fr.uge.nonblocking.readers.ResponseServerReader;
