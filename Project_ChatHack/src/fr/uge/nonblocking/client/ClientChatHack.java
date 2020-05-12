@@ -220,29 +220,12 @@ public class ClientChatHack {
 	
     private void checkAuthentification() throws IOException {
     	var bbLogin = UTF8.encode(login);
-    	var bbMDP = UTF8.encode("work"); // Etienne login
+    	var bbMDP = UTF8.encode("€€€€€"); // Etienne login
     	var sizeLogin = bbLogin.remaining();
     	var sizeMDP = bbMDP.remaining();
     	var buffer = ByteBuffer.allocate(Byte.BYTES + Long.BYTES + 2 * Integer.BYTES + sizeLogin + sizeMDP);
     	buffer.put(OP).putLong(123).putInt(sizeLogin).put(bbLogin).putInt(sizeMDP).put(bbMDP).flip(); // Read mode
-    	sc.write(buffer);
-    	
-    	/*var bbOp = ByteBuffer.allocate(Byte.BYTES);
-    	while(!readFully(sc, bbOp)) {
-    		return;
-    	}
-    	var op = bbOp.get();
-    	System.out.println("Get Op");
-    	var bbId = ByteBuffer.allocate(Long.BYTES);
-    	
-    	while(!readFully(sc, bbId)) {
-    		return;
-    	}
-
-    	var id = bbId.getLong();
-    	
-    	System.out.println(op + " " + id);*/
-    	
+    	uniqueContext.queueMessage(buffer);
     }
     
 	static boolean readFully(SocketChannel sc, ByteBuffer bb) throws IOException {
