@@ -4,6 +4,10 @@
 *.iml
 *.ipr
 *.iws
+.idea/misc.xml
+.idea/agullo-crete.iml
+.idea/modules.xml
+.idea/vcs.xml
 
 # Eclipse
 .settings/
