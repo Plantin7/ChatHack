@@ -10,6 +10,7 @@ public class ResponseServerReader implements Reader<ResponseServer> {
 	private byte op;
 	private long id;
 
+	private final ByteReader byteReader = new ByteReader();
 	private final LongReader longReader = new LongReader();
 
 	@Override
@@ -19,11 +20,15 @@ public class ResponseServerReader implements Reader<ResponseServer> {
 		}
 		switch(state) {
 		case WAITING_OP: {
-			op = bb.get();
+			var stateOp = getPart(byteReader, bb);
+			if(stateOp != ProcessStatus.DONE) {
+				return stateOp;
+			}
+			op = byteReader.get();
 			state = State.WAITING_ID;
 		}
 		case WAITING_ID: {
-			var stateId = getLongPart(bb);
+			var stateId = getPart(longReader, bb);
 			if(stateId != ProcessStatus.DONE) {
 				return stateId;
 			}
@@ -37,8 +42,8 @@ public class ResponseServerReader implements Reader<ResponseServer> {
 		}	
 	}
 
-	private ProcessStatus getLongPart(ByteBuffer bb) {
-		Reader.ProcessStatus status = longReader.process(bb);
+	private ProcessStatus getPart(Reader<?> reader, ByteBuffer bb) {
+		Reader.ProcessStatus status = reader.process(bb);
 		switch (status) {
 		case DONE: return ProcessStatus.DONE;
 		case REFILL: return ProcessStatus.REFILL;
@@ -58,6 +63,7 @@ public class ResponseServerReader implements Reader<ResponseServer> {
 	@Override
 	public void reset() {
 		state = State.WAITING_OP;
+		byteReader.reset();
 		longReader.reset();
 
 	}

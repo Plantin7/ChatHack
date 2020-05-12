@@ -8,14 +8,13 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Logger;
 
-import fr.uge.nonblocking.readers.Message;
-import fr.uge.nonblocking.readers.MessageReader;
 import fr.uge.nonblocking.readers.Reader.ProcessStatus;
 import fr.uge.nonblocking.readers.ResponseServer;
 import fr.uge.nonblocking.readers.ResponseServerReader;
@@ -33,35 +32,34 @@ public class ClientChatHack {
         final private ResponseServerReader responseServerReader = new ResponseServerReader();
         private boolean closed = false;
 
-        private Context(SelectionKey key){
+        private Context(SelectionKey key) {
             this.key = key;
             this.sc = (SocketChannel) key.channel();
         }
 
         /**
          * Process the content of bbin
-         *
+         * <p>
          * The convention is that bbin is in write-mode before the call
          * to process and after the call
-         *
          */
         private void processIn() {
-        	while(true) {
-        		ProcessStatus status = responseServerReader.process(bbin);
-        		switch (status) {
-				case DONE:
-					//Message message = messageReader.get();
-					ResponseServer response = responseServerReader.get();
-					System.out.println(response);
-					responseServerReader.reset();
-					break;
-				case REFILL:
-					return;
-				case ERROR:
-					silentlyClose();
-					return;
-				}
-        	}
+            while (true) {
+                ProcessStatus status = responseServerReader.process(bbin);
+                switch (status) {
+                    case DONE:
+                        //Message message = messageReader.get();
+                        ResponseServer response = responseServerReader.get();
+                        System.out.println(response);
+                        responseServerReader.reset();
+                        break;
+                    case REFILL:
+                        return;
+                    case ERROR:
+                        silentlyClose();
+                        return;
+                }
+            }
         }
 
         /**
@@ -77,17 +75,15 @@ public class ClientChatHack {
 
         /**
          * Try to fill bbout from the message queue
-         *
          */
         private void processOut() {
-            while (!queue.isEmpty()){
+            while (!queue.isEmpty()) {
                 var bb = queue.peek();
-                if (bb.remaining()<=bbout.remaining()){
+                if (bb.remaining() <= bbout.remaining()) {
                     queue.remove();
                     bbout.put(bb);
-                }
-                else {
-                	return;
+                } else {
+                    return;
                 }
             }
         }
@@ -96,7 +92,7 @@ public class ClientChatHack {
          * Update the interestOps of the key looking
          * only at values of the boolean closed and
          * of both ByteBuffers.
-         *
+         * <p>
          * The convention is that both buffers are in write-mode before the call
          * to updateInterestOps and after the call.
          * Also it is assumed that process has been be called just
@@ -104,14 +100,14 @@ public class ClientChatHack {
          */
 
         private void updateInterestOps() {
-            var interesOps=0;
-            if (!closed && bbin.hasRemaining()){
-                interesOps=interesOps|SelectionKey.OP_READ;
+            var interesOps = 0;
+            if (!closed && bbin.hasRemaining()) {
+                interesOps = interesOps | SelectionKey.OP_READ;
             }
-            if (bbout.position()!=0){
-                interesOps|=SelectionKey.OP_WRITE;
+            if (bbout.position() != 0) {
+                interesOps |= SelectionKey.OP_WRITE;
             }
-            if (interesOps==0){
+            if (interesOps == 0) {
                 silentlyClose();
                 return;
             }
@@ -128,15 +124,15 @@ public class ClientChatHack {
 
         /**
          * Performs the read action on sc
-         *
+         * <p>
          * The convention is that both buffers are in write-mode before the call
          * to doRead and after the call
          *
          * @throws IOException
          */
         private void doRead() throws IOException {
-            if (sc.read(bbin)==-1) {
-                closed=true;
+            if (sc.read(bbin) == -1) {
+                closed = true;
             }
             processIn();
             updateInterestOps();
@@ -144,7 +140,7 @@ public class ClientChatHack {
 
         /**
          * Performs the write action on sc
-         *
+         * <p>
          * The convention is that both buffers are in write-mode before the call
          * to doWrite and after the call
          *
@@ -160,10 +156,10 @@ public class ClientChatHack {
         }
 
         public void doConnect() throws IOException {
-        	if(!sc.finishConnect()) {
-        		return;
-        	}
-        	key.interestOps(SelectionKey.OP_READ);
+            if (!sc.finishConnect()) {
+                return;
+            }
+            key.interestOps(SelectionKey.OP_READ);
         }
     }
 
@@ -173,24 +169,40 @@ public class ClientChatHack {
 
     private final SocketChannel sc;
     private final Selector selector;
-    private final InetSocketAddress serverAddress;
-    private final String login;
+
+
     private final Thread console;
-	private final static Charset UTF8 = Charset.forName("UTF8");
+    private final static Charset UTF8 = StandardCharsets.UTF_8;
     private final ArrayBlockingQueue<String> commandQueue = new ArrayBlockingQueue<>(10);
     private Context uniqueContext;
 
-    public ClientChatHack(String login, InetSocketAddress serverAddress) throws IOException {
+    // params clientChatHack
+    private final InetSocketAddress serverAddress;
+    private final String login;
+    private final String pathRepository;
+    private final String password;
+
+    private static final byte OP_CONNECTION_WITH_MDP = 1;
+    private static final byte OP_CONNECTION_NO_MDP = 2;
+
+    public ClientChatHack(InetSocketAddress serverAddress, String pathRepository, String login, String password) throws IOException {
         this.serverAddress = serverAddress;
         this.login = login;
+        this.pathRepository = pathRepository;
+        this.password = password;
         this.sc = SocketChannel.open();
         this.selector = Selector.open();
         this.console = new Thread(this::consoleRun);
     }
 
     private void consoleRun() {
-        try(var scan = new Scanner(System.in)) {
+        try (var scan = new Scanner(System.in)) {
             while (scan.hasNextLine()) {
+               if (scan.toString().toUpperCase().equals("AUTH")) {
+                    var login = this.login;
+                    var password = this.password;
+                    sendAuthentification(login, password);
+               }
                 var msg = scan.nextLine();
                 sendCommand(msg);
             }
@@ -210,59 +222,58 @@ public class ClientChatHack {
 
 
     private void sendCommand(String msg) throws InterruptedException {
-    	synchronized (commandQueue) {
-    		commandQueue.put(msg);
+        synchronized (commandQueue) {
+            commandQueue.put(msg);
 
-    		selector.wakeup();
-		}
+            selector.wakeup();
+        }
     }
-	private static final byte OP       = 1;
-	
+
+    private void sendAuthentification(String login, String password) throws InterruptedException {
+        var bbLogin = UTF8.encode(login);
+        var sizeLogin = bbLogin.remaining();
+        ByteBuffer bufferAuth;
+        if (!password.isEmpty()) {
+            var bbPassword = UTF8.encode(password);
+            var sizePassWord = bbPassword.remaining();
+            bufferAuth = ByteBuffer.allocate(Byte.BYTES + Integer.BYTES + sizeLogin + Integer.BYTES + sizePassWord);
+            bufferAuth.put(OP_CONNECTION_WITH_MDP).putInt(sizeLogin).put(bbLogin).putInt(sizePassWord).put(bbPassword);
+        } else {
+            bufferAuth = ByteBuffer.allocate(Byte.BYTES + Integer.BYTES + sizeLogin);
+            bufferAuth.put(OP_CONNECTION_NO_MDP).putInt(sizeLogin).put(bbLogin);
+        }
+        /*
+        bufferAuth.flip();
+        sc.write(bufferAuth);
+        bufferAuth.clear();
+         */
+        synchronized (this.commandQueue) {
+            uniqueContext.queueMessage(bufferAuth);
+            this.selector.wakeup();
+        }
+
+    }
+
+
     private void checkAuthentification() throws IOException {
     	var bbLogin = UTF8.encode(login);
-    	var bbMDP = UTF8.encode("work"); // Etienne login
+    	var bbMDP = UTF8.encode("€€€€€"); // Etienne login
     	var sizeLogin = bbLogin.remaining();
     	var sizeMDP = bbMDP.remaining();
     	var buffer = ByteBuffer.allocate(Byte.BYTES + Long.BYTES + 2 * Integer.BYTES + sizeLogin + sizeMDP);
     	buffer.put(OP).putLong(123).putInt(sizeLogin).put(bbLogin).putInt(sizeMDP).put(bbMDP).flip(); // Read mode
-    	sc.write(buffer);
-    	
-    	/*var bbOp = ByteBuffer.allocate(Byte.BYTES);
-    	while(!readFully(sc, bbOp)) {
-    		return;
-    	}
-    	var op = bbOp.get();
-    	System.out.println("Get Op");
-    	var bbId = ByteBuffer.allocate(Long.BYTES);
-    	
-    	while(!readFully(sc, bbId)) {
-    		return;
-    	}
-
-    	var id = bbId.getLong();
-    	
-    	System.out.println(op + " " + id);*/
-    	
+    	uniqueContext.queueMessage(buffer);
     }
-    
-	static boolean readFully(SocketChannel sc, ByteBuffer bb) throws IOException {
-		while(bb.hasRemaining()) {
-			if(sc.read(bb) == -1) {
-				return false;
-			}
-		}
-		return true;
-	}
-    
+
 
     /**
      * Processes the command from commandQueue
      */
 
-    private void processCommands(){
-    	synchronized (commandQueue) {
-			var msg = commandQueue.poll();
-			if(msg != null) {
+    private void processCommands() {
+        synchronized (commandQueue) {
+            var msg = commandQueue.poll();
+            if (msg != null) {
 //				var bbLogin = UTF8.encode(login);
 //				var bbMessage = UTF8.encode(msg);
 //				var sizeLogin = bbLogin.limit();
@@ -270,13 +281,13 @@ public class ClientChatHack {
 //				var buffer = ByteBuffer.allocate(2*Integer.BYTES + sizeLogin + sizeMessage);
 //				buffer.putInt(sizeLogin).put(bbLogin).putInt(sizeMessage).put(bbMessage).flip();
 //				uniqueContext.queueMessage(buffer);
-	    		try {
-					checkAuthentification();
-				} catch (IOException e) {
-					//
-				}
-			}
-		}
+                try {
+                    checkAuthentification();
+                } catch (IOException e) {
+                    //
+                }
+            }
+        }
     }
 
     public void launch() throws IOException {
@@ -285,11 +296,35 @@ public class ClientChatHack {
         uniqueContext = new Context(key);
         key.attach(uniqueContext);
         sc.connect(serverAddress);
-        
+
         console.setDaemon(true);
         console.start();
 
-        while(!Thread.interrupted()) {
+
+        Thread consoleThread = new Thread(() -> {
+            try(Scanner scanner = new Scanner(System.in)){
+                while(scanner.hasNext()) {
+                    switch (scanner.next().toUpperCase()) {
+                        case "/" :
+                            // TODO : public message
+                            break;
+                        case "@":
+                            // TODO : public message
+                            break;
+                        case "@login":
+                            // TODO : private message
+                            break;
+                        case "/login file":
+                            //TODO : private file
+                        default:
+                            throw new IllegalArgumentException("Unexpected command: " + scanner.next());
+                    }
+                }
+            }
+        });
+        consoleThread.start();
+
+        while (!Thread.interrupted()) {
             try {
                 selector.select(this::treatKey);
                 processCommands();
@@ -310,21 +345,22 @@ public class ClientChatHack {
             if (key.isValid() && key.isReadable()) {
                 uniqueContext.doRead();
             }
-        } catch(IOException ioe) {
+        } catch (IOException ioe) {
             // lambda call in select requires to tunnel IOException
             throw new UncheckedIOException(ioe);
         }
     }
 
     public static void main(String[] args) throws NumberFormatException, IOException {
-        if (args.length!=3){
+        if (args.length != 4) {
             usage();
             return;
         }
-        new ClientChatHack(args[0],new InetSocketAddress(args[1],Integer.parseInt(args[2]))).launch();
+        //new ClientChatHack(args[0],new InetSocketAddress(args[1],Integer.parseInt(args[2]))).launch();
+        new ClientChatHack(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[2], args[3], args[4]);
     }
 
-    private static void usage(){
-        System.out.println("Usage : ClientChat login hostname port");
+    private static void usage() {
+        System.out.println("Usage : ClientChatHack hostname port path_file login password(optional)");
     }
 }
