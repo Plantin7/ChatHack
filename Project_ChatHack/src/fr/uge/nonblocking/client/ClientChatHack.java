@@ -198,13 +198,25 @@ public class ClientChatHack {
     private void consoleRun() {
         try (var scan = new Scanner(System.in)) {
             while (scan.hasNextLine()) {
-               if (scan.toString().toUpperCase().equals("AUTH")) {
-                    var login = this.login;
-                    var password = this.password;
+                if (scan.toString().toUpperCase().equals("AUTH")) {
                     sendAuthentification(login, password);
-               }
+                }
                 var msg = scan.nextLine();
-                sendCommand(msg);
+                switch (scan.next().toUpperCase()) {
+                    case "/":
+                    case "@":
+                        sendCommand(msg);
+                        break;
+                    case "@login":
+                        // TODO : private message
+                        break;
+                    case "/login file":
+                        //TODO : private file
+                    default:
+                        throw new IllegalArgumentException("Unexpected command: " + scan.next());
+                }
+
+
             }
         } catch (InterruptedException e) {
             logger.info("Console thread has been interrupted");
@@ -224,12 +236,11 @@ public class ClientChatHack {
     private void sendCommand(String msg) throws InterruptedException {
         synchronized (commandQueue) {
             commandQueue.put(msg);
-
             selector.wakeup();
         }
     }
 
-    private void sendAuthentification(String login, String password) throws InterruptedException {
+    private void sendAuthentification(String login, String password) {
         var bbLogin = UTF8.encode(login);
         var sizeLogin = bbLogin.remaining();
         ByteBuffer bufferAuth;
@@ -242,11 +253,6 @@ public class ClientChatHack {
             bufferAuth = ByteBuffer.allocate(Byte.BYTES + Integer.BYTES + sizeLogin);
             bufferAuth.put(OP_CONNECTION_NO_MDP).putInt(sizeLogin).put(bbLogin);
         }
-        /*
-        bufferAuth.flip();
-        sc.write(bufferAuth);
-        bufferAuth.clear();
-         */
         synchronized (this.commandQueue) {
             uniqueContext.queueMessage(bufferAuth);
             this.selector.wakeup();
@@ -256,13 +262,13 @@ public class ClientChatHack {
 
 
     private void checkAuthentification() throws IOException {
-    	var bbLogin = UTF8.encode(login);
-    	var bbMDP = UTF8.encode("€€€€€"); // Etienne login
-    	var sizeLogin = bbLogin.remaining();
-    	var sizeMDP = bbMDP.remaining();
-    	var buffer = ByteBuffer.allocate(Byte.BYTES + Long.BYTES + 2 * Integer.BYTES + sizeLogin + sizeMDP);
-    	buffer.put(OP).putLong(123).putInt(sizeLogin).put(bbLogin).putInt(sizeMDP).put(bbMDP).flip(); // Read mode
-    	uniqueContext.queueMessage(buffer);
+        var bbLogin = UTF8.encode(login);
+        var bbMDP = UTF8.encode("€€€€€"); // Etienne login
+        var sizeLogin = bbLogin.remaining();
+        var sizeMDP = bbMDP.remaining();
+        var buffer = ByteBuffer.allocate(Byte.BYTES + Long.BYTES + 2 * Integer.BYTES + sizeLogin + sizeMDP);
+        buffer.put(OP_CONNECTION_WITH_MDP).putLong(123).putInt(sizeLogin).put(bbLogin).putInt(sizeMDP).put(bbMDP).flip(); // Read mode
+        uniqueContext.queueMessage(buffer);
     }
 
 
@@ -300,30 +306,6 @@ public class ClientChatHack {
         console.setDaemon(true);
         console.start();
 
-
-        Thread consoleThread = new Thread(() -> {
-            try(Scanner scanner = new Scanner(System.in)){
-                while(scanner.hasNext()) {
-                    switch (scanner.next().toUpperCase()) {
-                        case "/" :
-                            // TODO : public message
-                            break;
-                        case "@":
-                            // TODO : public message
-                            break;
-                        case "@login":
-                            // TODO : private message
-                            break;
-                        case "/login file":
-                            //TODO : private file
-                        default:
-                            throw new IllegalArgumentException("Unexpected command: " + scanner.next());
-                    }
-                }
-            }
-        });
-        consoleThread.start();
-
         while (!Thread.interrupted()) {
             try {
                 selector.select(this::treatKey);
@@ -352,7 +334,7 @@ public class ClientChatHack {
     }
 
     public static void main(String[] args) throws NumberFormatException, IOException {
-        if (args.length != 4) {
+        if (args.length < 4) {
             usage();
             return;
         }
