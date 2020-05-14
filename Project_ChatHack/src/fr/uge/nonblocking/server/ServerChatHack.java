@@ -15,12 +15,11 @@ import java.util.logging.Logger;
 import fr.uge.nonblocking.readers.Message;
 import fr.uge.nonblocking.readers.MessageReader;
 import fr.uge.nonblocking.readers.Reader;
-import fr.uge.nonblocking.utils.FileParser;
 
 public class ServerChatHack {
-
+	
 	static private class Context {
-
+		
 		final private SelectionKey key;
 		final private SocketChannel sc;
 		final private ByteBuffer bbin = ByteBuffer.allocate(2*Integer.BYTES + 2*BUFFER_SIZE);
@@ -29,6 +28,7 @@ public class ServerChatHack {
 		final private MessageReader messageReader = new MessageReader();    
 		final private ServerChatHack server;
 		private boolean closed = false;
+		
 
 		private Context(ServerChatHack server, SelectionKey key){
 			this.key = key;
@@ -175,7 +175,6 @@ public class ServerChatHack {
 		serverSocketChannel = ServerSocketChannel.open();
 		serverSocketChannel.bind(new InetSocketAddress(port));
 		selector = Selector.open();
-		FileParser.parsePasswordFile(filePath, "$");
 	}
 
 	public void launch() throws IOException {
@@ -223,7 +222,8 @@ public class ServerChatHack {
 		}
 		sc.configureBlocking(false);
 		var client = sc.register(selector, SelectionKey.OP_READ);
-		client.attach(new Context(this, client));
+		var context = new Context(this, client);
+		client.attach(context);
 	}
 
 	private void silentlyClose(SelectionKey key) {

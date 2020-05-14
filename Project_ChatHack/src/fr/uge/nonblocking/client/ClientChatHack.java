@@ -225,16 +225,6 @@ public class ClientChatHack {
     	buffer.put(OP).putLong(123).putInt(sizeLogin).put(bbLogin).putInt(sizeMDP).put(bbMDP).flip(); // Read mode
     	uniqueContext.queueMessage(buffer);
     }
-    
-	static boolean readFully(SocketChannel sc, ByteBuffer bb) throws IOException {
-		while(bb.hasRemaining()) {
-			if(sc.read(bb) == -1) {
-				return false;
-			}
-		}
-		return true;
-	}
-    
 
     /**
      * Processes the command from commandQueue
