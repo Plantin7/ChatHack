@@ -285,10 +285,6 @@ public class ClientChatHack {
         buffer.put(OP_CONNECTION_WITH_MDP).putLong(123).putInt(sizeLogin).put(bbLogin).putInt(sizeMDP).put(bbMDP).flip(); // Read mode
         uniqueContext.queueMessage(buffer);
     }
-<<<<<<< HEAD
-=======
-
->>>>>>> 6d507c3618556361b40e1ae658d21d05f5e788ef
 
     /**
      * Processes the command from commandQueue
