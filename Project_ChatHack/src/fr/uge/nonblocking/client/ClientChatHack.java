@@ -15,9 +15,13 @@ import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Logger;
 
+import fr.uge.nonblocking.readers.MessageReader;
+import fr.uge.nonblocking.readers.OPMessageReader;
 import fr.uge.nonblocking.readers.Reader.ProcessStatus;
 import fr.uge.nonblocking.readers.ResponseServer;
 import fr.uge.nonblocking.readers.ResponseServerReader;
+
+import javax.swing.plaf.nimbus.State;
 
 public class ClientChatHack {
 
@@ -30,6 +34,7 @@ public class ClientChatHack {
         final private Queue<ByteBuffer> queue = new LinkedList<>(); // buffers read-mode
         // final private MessageReader messageReader = new MessageReader();
         final private ResponseServerReader responseServerReader = new ResponseServerReader();
+        final private OPMessageReader opMessageReader = new OPMessageReader();
         private boolean closed = false;
 
         private Context(SelectionKey key) {
@@ -45,19 +50,18 @@ public class ClientChatHack {
          */
         private void processIn() {
             while (true) {
-                ProcessStatus status = responseServerReader.process(bbin);
+                var status = opMessageReader.process(bbin);
                 switch (status) {
-                    case DONE:
-                        //Message message = messageReader.get();
-                        ResponseServer response = responseServerReader.get();
-                        System.out.println(response);
-                        responseServerReader.reset();
-                        break;
                     case REFILL:
                         return;
                     case ERROR:
                         silentlyClose();
                         return;
+                    case DONE:
+                        var response = opMessageReader.get();
+                        opMessageReader.reset();
+                        System.out.println(response);
+                        break;
                 }
             }
         }
@@ -159,7 +163,7 @@ public class ClientChatHack {
             if (!sc.finishConnect()) {
                 return;
             }
-            key.interestOps(SelectionKey.OP_READ);
+            updateInterestOps();
         }
     }
 
@@ -169,7 +173,6 @@ public class ClientChatHack {
 
     private final SocketChannel sc;
     private final Selector selector;
-
 
     private final Thread console;
     private final static Charset UTF8 = StandardCharsets.UTF_8;
@@ -181,6 +184,10 @@ public class ClientChatHack {
     private final String login;
     private final String pathRepository;
     private final String password;
+
+    private enum StateConnection {CONNECTED, DISCONNECTED};
+    private enum error {INCORRECT_LOGIN, LOGIN_IN_USE, LOGIN_ALREADY_INTO_DB}
+    private StateConnection stateConnection;
 
     private static final byte OP_CONNECTION_WITH_MDP = 1;
     private static final byte OP_CONNECTION_NO_MDP = 2;
@@ -198,24 +205,34 @@ public class ClientChatHack {
     private void consoleRun() {
         try (var scan = new Scanner(System.in)) {
             while (scan.hasNextLine()) {
-                if (scan.toString().toUpperCase().equals("AUTH")) {
-                    sendAuthentification(login, password);
-                }
-                var msg = scan.nextLine();
-                switch (scan.next().toUpperCase()) {
-                    case "/":
-                    case "@":
-                        sendCommand(msg);
-                        break;
-                    case "@login":
-                        // TODO : private message
-                        break;
-                    case "/login file":
-                        //TODO : private file
-                    default:
-                        throw new IllegalArgumentException("Unexpected command: " + scan.next());
-                }
 
+                if(stateConnection == StateConnection.DISCONNECTED) { // if client is not connected
+                    if (scan.toString().toUpperCase().equals("AUTH")) {
+                        sendAuthentification(login, password);
+                    }
+                } else {
+                    switch (scan.next().toUpperCase()) {
+                        case "/":
+                        case "@":
+                            var msg = scan.nextLine();
+                            sendCommand(msg);
+                            break;
+                        case "@login":
+                            // TODO : private message
+                            break;
+                        case "/login file":
+                            //TODO : private file
+                        default:
+                            throw new IllegalArgumentException("Unexpected command: " + scan.next());
+                    }
+                }
+                // stocker la correspondance entre le login et le contexte : map
+                // je donne tel id à tel contexte
+                // L'objet Context ne sera pas le même
+                // Client  1 -> négocier le login avec le serveur
+                // selecteur --> le même selecteur qui surveille toute les connexions ()
+                // filtrer si on est connecté ou non
+                //  traiter le paquet ou pas
 
             }
         } catch (InterruptedException e) {
@@ -231,8 +248,6 @@ public class ClientChatHack {
      * @param msg
      * @throws InterruptedException
      */
-
-
     private void sendCommand(String msg) throws InterruptedException {
         synchronized (commandQueue) {
             commandQueue.put(msg);
@@ -338,8 +353,7 @@ public class ClientChatHack {
             usage();
             return;
         }
-        //new ClientChatHack(args[0],new InetSocketAddress(args[1],Integer.parseInt(args[2]))).launch();
-        new ClientChatHack(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[2], args[3], args[4]);
+        new ClientChatHack(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[2], args[3], args[4]).launch();
     }
 
     private static void usage() {
