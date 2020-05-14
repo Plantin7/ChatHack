@@ -1,6 +1,11 @@
-package fr.uge.nonblocking.readers;
+package fr.uge.nonblocking.readers.complexReader;
 
 import java.nio.ByteBuffer;
+
+import fr.uge.nonblocking.readers.Reader;
+import fr.uge.nonblocking.readers.Reader.ProcessStatus;
+import fr.uge.nonblocking.readers.basicReader.ByteReader;
+import fr.uge.nonblocking.readers.basicReader.LongReader;
 
 public class ResponseServerReader implements Reader<ResponseServer> {
 

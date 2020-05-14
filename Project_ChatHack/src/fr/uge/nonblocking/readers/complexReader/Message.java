@@ -1,4 +1,4 @@
-package fr.uge.nonblocking.readers;
+package fr.uge.nonblocking.readers.complexReader;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;

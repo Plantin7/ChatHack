@@ -15,159 +15,15 @@ import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Logger;
 
-import fr.uge.nonblocking.readers.MessageReader;
-import fr.uge.nonblocking.readers.OPMessageReader;
 import fr.uge.nonblocking.readers.Reader.ProcessStatus;
-import fr.uge.nonblocking.readers.ResponseServer;
-import fr.uge.nonblocking.readers.ResponseServerReader;
-
-import javax.swing.plaf.nimbus.State;
+import fr.uge.nonblocking.readers.complexReader.MessageReader;
+import fr.uge.nonblocking.readers.complexReader.OPMessageReader;
+import fr.uge.nonblocking.readers.complexReader.ResponseServer;
+import fr.uge.nonblocking.readers.complexReader.ResponseServerReader;
+import fr.uge.nonblocking.client.context.ClientContext;
 
 public class ClientChatHack {
-
-    static private class Context {
-
-        final private SelectionKey key;
-        final private SocketChannel sc;
-        final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
-        final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
-        final private Queue<ByteBuffer> queue = new LinkedList<>(); // buffers read-mode
-        // final private MessageReader messageReader = new MessageReader();
-        final private ResponseServerReader responseServerReader = new ResponseServerReader();
-        final private OPMessageReader opMessageReader = new OPMessageReader();
-        private boolean closed = false;
-
-        private Context(SelectionKey key) {
-            this.key = key;
-            this.sc = (SocketChannel) key.channel();
-        }
-
-        /**
-         * Process the content of bbin
-         * <p>
-         * The convention is that bbin is in write-mode before the call
-         * to process and after the call
-         */
-        private void processIn() {
-            while (true) {
-                var status = opMessageReader.process(bbin);
-                switch (status) {
-                    case REFILL:
-                        return;
-                    case ERROR:
-                        silentlyClose();
-                        return;
-                    case DONE:
-                        var response = opMessageReader.get();
-                        opMessageReader.reset();
-                        System.out.println(response);
-                        break;
-                }
-            }
-        }
-
-        /**
-         * Add a message to the message queue, tries to fill bbOut and updateInterestOps
-         *
-         * @param bb
-         */
-        private void queueMessage(ByteBuffer bb) {
-            queue.add(bb);
-            processOut();
-            updateInterestOps();
-        }
-
-        /**
-         * Try to fill bbout from the message queue
-         */
-        private void processOut() {
-            while (!queue.isEmpty()) {
-                var bb = queue.peek();
-                if (bb.remaining() <= bbout.remaining()) {
-                    queue.remove();
-                    bbout.put(bb);
-                } else {
-                    return;
-                }
-            }
-        }
-
-        /**
-         * Update the interestOps of the key looking
-         * only at values of the boolean closed and
-         * of both ByteBuffers.
-         * <p>
-         * The convention is that both buffers are in write-mode before the call
-         * to updateInterestOps and after the call.
-         * Also it is assumed that process has been be called just
-         * before updateInterestOps.
-         */
-
-        private void updateInterestOps() {
-            var interesOps = 0;
-            if (!closed && bbin.hasRemaining()) {
-                interesOps = interesOps | SelectionKey.OP_READ;
-            }
-            if (bbout.position() != 0) {
-                interesOps |= SelectionKey.OP_WRITE;
-            }
-            if (interesOps == 0) {
-                silentlyClose();
-                return;
-            }
-            key.interestOps(interesOps);
-        }
-
-        private void silentlyClose() {
-            try {
-                sc.close();
-            } catch (IOException e) {
-                // ignore exception
-            }
-        }
-
-        /**
-         * Performs the read action on sc
-         * <p>
-         * The convention is that both buffers are in write-mode before the call
-         * to doRead and after the call
-         *
-         * @throws IOException
-         */
-        private void doRead() throws IOException {
-            if (sc.read(bbin) == -1) {
-                closed = true;
-            }
-            processIn();
-            updateInterestOps();
-        }
-
-        /**
-         * Performs the write action on sc
-         * <p>
-         * The convention is that both buffers are in write-mode before the call
-         * to doWrite and after the call
-         *
-         * @throws IOException
-         */
-
-        private void doWrite() throws IOException {
-            bbout.flip();
-            sc.write(bbout);
-            bbout.compact();
-            processOut();
-            updateInterestOps();
-        }
-
-        public void doConnect() throws IOException {
-            if (!sc.finishConnect()) {
-                return;
-            }
-            updateInterestOps();
-        }
-    }
-
-    static private int BUFFER_SIZE = 10_000;
+	
     static private Logger logger = Logger.getLogger(ClientChatHack.class.getName());
 
 
@@ -177,7 +33,7 @@ public class ClientChatHack {
     private final Thread console;
     private final static Charset UTF8 = StandardCharsets.UTF_8;
     private final ArrayBlockingQueue<String> commandQueue = new ArrayBlockingQueue<>(10);
-    private Context uniqueContext;
+    private ClientContext uniqueContext;
 
     // params clientChatHack
     private final InetSocketAddress serverAddress;
@@ -313,7 +169,7 @@ public class ClientChatHack {
     public void launch() throws IOException {
         sc.configureBlocking(false);
         var key = sc.register(selector, SelectionKey.OP_CONNECT);
-        uniqueContext = new Context(key);
+        uniqueContext = new ClientContext(key);
         key.attach(uniqueContext);
         sc.connect(serverAddress);
 
@@ -348,11 +204,11 @@ public class ClientChatHack {
     }
 
     public static void main(String[] args) throws NumberFormatException, IOException {
-        if (args.length < 4) {
+        if (args.length != 4) {
             usage();
             return;
         }
-        new ClientChatHack(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[2], args[3], args[4]).launch();
+        new ClientChatHack(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[2], args[3], " ").launch();
     }
 
     private static void usage() {

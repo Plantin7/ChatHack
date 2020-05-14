@@ -1,8 +1,11 @@
-package fr.uge.nonblocking.readers;
+package fr.uge.nonblocking.readers.basicReader;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.logging.Logger;
+
+import fr.uge.nonblocking.readers.Reader;
+import fr.uge.nonblocking.readers.Reader.ProcessStatus;
 
 public class StringReader implements Reader<String>{
 

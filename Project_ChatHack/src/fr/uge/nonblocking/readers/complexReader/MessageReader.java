@@ -1,6 +1,10 @@
-package fr.uge.nonblocking.readers;
+package fr.uge.nonblocking.readers.complexReader;
 
 import java.nio.ByteBuffer;
+
+import fr.uge.nonblocking.readers.Reader;
+import fr.uge.nonblocking.readers.Reader.ProcessStatus;
+import fr.uge.nonblocking.readers.basicReader.StringReader;
 
 public class MessageReader implements Reader<Message> {
 

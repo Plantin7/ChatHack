@@ -1,14 +1,17 @@
-package fr.uge.nonblocking.readers;
+package fr.uge.nonblocking.readers.basicReader;
 
 import java.nio.ByteBuffer;
 
-public class ByteReader implements Reader<Byte> {
+import fr.uge.nonblocking.readers.Reader;
+import fr.uge.nonblocking.readers.Reader.ProcessStatus;
+
+public class LongReader implements Reader<Long> {
 
     private enum State {DONE,WAITING,ERROR};
 
     private State state = State.WAITING;
-    private final ByteBuffer internalbb = ByteBuffer.allocate(Byte.BYTES); // write-mode
-    private byte value;
+    private final ByteBuffer internalbb = ByteBuffer.allocate(Long.BYTES); // write-mode
+    private long value;
 
     @Override
     public ProcessStatus process(ByteBuffer bb) {
@@ -33,12 +36,12 @@ public class ByteReader implements Reader<Byte> {
         }
         state=State.DONE;
         internalbb.flip();
-        value=internalbb.get();
+        value=internalbb.getLong();
         return ProcessStatus.DONE;
     }
 
     @Override
-    public Byte get() {
+    public Long get() {
         if (state!= State.DONE) {
             throw new IllegalStateException();
         }
