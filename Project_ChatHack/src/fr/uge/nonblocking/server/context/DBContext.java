@@ -1,4 +1,4 @@
-package fr.uge.nonblocking.client.context;
+package fr.uge.nonblocking.server.context;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -6,48 +6,44 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.logging.Logger;
 
-import fr.uge.nonblocking.client.ClientChatHack;
-import fr.uge.nonblocking.frame.ClientFrameVisitor;
-import fr.uge.nonblocking.frame.Frame;
-import fr.uge.nonblocking.frame.ServerFrameVisitor;
-import fr.uge.nonblocking.readers.complexReader.FrameReader;
-import fr.uge.nonblocking.readers.complexReader.OPMessageReader;
-import fr.uge.nonblocking.readers.complexReader.ResponseServerReader;
+import fr.uge.nonblocking.readers.Reader;
+import fr.uge.nonblocking.readers.complexReader.PublicMessageReader;
+import fr.uge.nonblocking.server.ServerChatHack;
 
-public class ClientContext {
-	static private int BUFFER_SIZE = 10_000;
-
+public class DBContext {
+	static private int BUFFER_SIZE = 1_024;
+	static private Logger logger = Logger.getLogger(DBContext.class.getName());
+	
 	final private SelectionKey key;
 	final private SocketChannel sc;
-	final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
-	final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
-	final private Queue<ByteBuffer> queue = new LinkedList<>(); // buffers read-mode
-	final private FrameReader frameReader = new FrameReader();
-	private final ClientFrameVisitor frameVisitor;
-
+	final private ByteBuffer bbin = ByteBuffer.allocate(2*Integer.BYTES + 2*BUFFER_SIZE);
+	final private ByteBuffer bbout = ByteBuffer.allocate(2*Integer.BYTES + 2*BUFFER_SIZE);
+	final private Queue<ByteBuffer> queue = new LinkedList<>();      // Queue de bytebuffer en read mode
+	final private PublicMessageReader messageReader = new PublicMessageReader();    
 	private boolean closed = false;
+	
 
-	public ClientContext(ClientChatHack client, SelectionKey key) {
+	public DBContext(ServerChatHack server, SelectionKey key){
 		this.key = key;
 		this.sc = (SocketChannel) key.channel();
-		this.frameVisitor = new ClientFrameVisitor(this, client);
 	}
 
 	/**
 	 * Process the content of bbin
-	 * <p>
+	 *
 	 * The convention is that bbin is in write-mode before the call
 	 * to process and after the call
+	 *
 	 */
 	private void processIn() {
-		while (true) {
-			var status = frameReader.process(bbin);
+		while(true) {
+			Reader.ProcessStatus status = messageReader.process(bbin); // BddResponseReader
 			switch (status) {
 			case DONE:
-				Frame frame = frameReader.get();
-				treatFrame(frame);
-				frameReader.reset();
+				var message = messageReader.get();
+				messageReader.reset();
 				break;
 			case REFILL:
 				return;
@@ -58,31 +54,28 @@ public class ClientContext {
 		}
 	}
 
-	private void treatFrame(Frame frame) {
-		frame.accept(frameVisitor);
-	}
-
 	/**
 	 * Add a message to the message queue, tries to fill bbOut and updateInterestOps
 	 *
-	 * @param bb
+	 * @param msg
 	 */
-	public void queueMessage(ByteBuffer bb) {
-		queue.add(bb);
+	public void queueMessage(ByteBuffer msg) {
+		queue.add(msg);
 		processOut();
 		updateInterestOps();
 	}
 
 	/**
 	 * Try to fill bbout from the message queue
+	 *
 	 */
 	private void processOut() {
-		while (!queue.isEmpty()) {
+		while(!queue.isEmpty()) {
 			var bb = queue.peek();
-			if (bb.remaining() <= bbout.remaining()) {
-				queue.remove();
-				bbout.put(bb);
-			} else {
+			if(bb.remaining() <= bbout.remaining()) { // suffisament grand pour contenir un message
+				bbout.put(queue.poll()); // the size of msg will not exceed 2056 octets
+			}
+			else {
 				return;
 			}
 		}
@@ -92,7 +85,7 @@ public class ClientContext {
 	 * Update the interestOps of the key looking
 	 * only at values of the boolean closed and
 	 * of both ByteBuffers.
-	 * <p>
+	 *
 	 * The convention is that both buffers are in write-mode before the call
 	 * to updateInterestOps and after the call.
 	 * Also it is assumed that process has been be called just
@@ -100,18 +93,21 @@ public class ClientContext {
 	 */
 
 	private void updateInterestOps() {
-		var interesOps = 0;
-		if (!closed && bbin.hasRemaining()) {
-			interesOps = interesOps | SelectionKey.OP_READ;
+		if(!key.isValid()) {
+			return;
 		}
-		if (bbout.position() != 0) {
-			interesOps |= SelectionKey.OP_WRITE;
+		var interestOps = 0;
+		if(!closed && bbin.hasRemaining()) {
+			interestOps |= SelectionKey.OP_READ;
 		}
-		if (interesOps == 0) {
+		if(bbout.position() != 0 || !queue.isEmpty()) {
+			interestOps |= SelectionKey.OP_WRITE;
+		}
+		if(interestOps == 0) {
 			silentlyClose();
 			return;
 		}
-		key.interestOps(interesOps);
+		key.interestOps(interestOps);
 	}
 
 	private void silentlyClose() {
@@ -124,14 +120,15 @@ public class ClientContext {
 
 	/**
 	 * Performs the read action on sc
-	 * <p>
+	 *
 	 * The convention is that both buffers are in write-mode before the call
 	 * to doRead and after the call
 	 *
 	 * @throws IOException
 	 */
 	public void doRead() throws IOException {
-		if (sc.read(bbin) == -1) {
+		if(sc.read(bbin) == -1) {
+			logger.info("Input stream closed");
 			closed = true;
 		}
 		processIn();
@@ -140,7 +137,7 @@ public class ClientContext {
 
 	/**
 	 * Performs the write action on sc
-	 * <p>
+	 *
 	 * The convention is that both buffers are in write-mode before the call
 	 * to doWrite and after the call
 	 *
@@ -149,17 +146,20 @@ public class ClientContext {
 
 	public void doWrite() throws IOException {
 		bbout.flip();
-		sc.write(bbout);
-		bbout.compact();
+		try {
+			sc.write(bbout);
+		} finally {
+			bbout.compact();
+		}
 		processOut();
 		updateInterestOps();
 	}
 
-	public void doConnect() throws IOException {
-		if (!sc.finishConnect()) {
-			return;
-		}
-		updateInterestOps();
-	}
 }
+/**
+ * - Le server -> authentification d'un client par le server BDD  1 byte + 1 long + login + mdp
+ * - Réponse BDD server : (1)1 byte + long ou (0)1 byte + 1 long
+ * - Le server -> peut demander si un login existe (2) byte + id
+ * - Réponse BDD server : (1)1 byte + long ou (0)1 byte + 1 long
+ */
 

@@ -2,17 +2,18 @@ package fr.uge.nonblocking.readers.complexReader;
 
 import java.nio.ByteBuffer;
 
+import fr.uge.nonblocking.frame.PublicMessage;
 import fr.uge.nonblocking.readers.Reader;
-import fr.uge.nonblocking.readers.Reader.ProcessStatus;
 import fr.uge.nonblocking.readers.basicReader.StringReader;
 
-public class MessageReader implements Reader<Message> {
+public class PublicMessageReader implements Reader<PublicMessage> {
 
 	private enum State {DONE, WAITING_LOGIN, WAITING_MSG, ERROR}
 
 	private State state = State.WAITING_LOGIN;
 	private String login;
 	private String message;
+	
 
 	private final StringReader stringReader = new StringReader();
 
@@ -57,11 +58,11 @@ public class MessageReader implements Reader<Message> {
 	}
 
 	@Override
-	public Message get() {
-		if (state!= State.DONE) {
+	public PublicMessage get() {
+		if (state != State.DONE) {
 			throw new IllegalStateException();
 		}
-		return new Message(login, message);
+		return new PublicMessage(login, message);
 	}
 
 	@Override

@@ -5,35 +5,51 @@ import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.HashMap;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import fr.uge.nonblocking.readers.Reader;
-import fr.uge.nonblocking.readers.complexReader.Message;
-import fr.uge.nonblocking.readers.complexReader.MessageReader;
+import fr.uge.nonblocking.readers.complexReader.OPMessage;
 import fr.uge.nonblocking.server.context.ServerContext;
 
 public class ServerChatHack {
 	
 	static private Logger logger = Logger.getLogger(ServerChatHack.class.getName());
+	/* -------------------------------- CLIENT CHAT HACK ----------------------------------------*/
+	private final InetSocketAddress serverDB;
+	private final SocketChannel socketChannel;
+	private SelectionKey dbKey;
+	private final static Charset UTF8 = StandardCharsets.UTF_8;
 
+	/* -------------------------------- SERVER CHAT HACK ----------------------------------------*/
 	private final ServerSocketChannel serverSocketChannel;
+	private final HashMap<Long, SelectionKey> map = new HashMap<>();
 	private final Selector selector;
 	private SelectionKey serverKey;
 
-	public ServerChatHack(int port) throws IOException {
+	public ServerChatHack(int port, InetSocketAddress serverDB) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
 		serverSocketChannel.bind(new InetSocketAddress(port));
 		selector = Selector.open();
+		this.serverDB = serverDB;
+		this.socketChannel = SocketChannel.open();
 	}
-
+	
 	public void launch() throws IOException {
+		
 		serverSocketChannel.configureBlocking(false);
 		serverKey = serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+		
+		socketChannel.connect(serverDB);
+		socketChannel.configureBlocking(false);
+		dbKey = socketChannel.register(selector, SelectionKey.OP_READ);
+		//enregitre mon contexte
+
+		
 		while(!Thread.interrupted()) {
 			printKeys(); // for debug
 			System.out.println("Starting select");
@@ -94,25 +110,25 @@ public class ServerChatHack {
 	 *
 	 * @param msg
 	 */
-	public void broadcast(Message msg) {
+	public void broadcast(ByteBuffer msg) {
 		for (var key : selector.keys()) { 
-			if(key.isValid() && key != serverKey) { // On ne veut pas du server
+			if(key.isValid() && key != serverKey && key != dbKey) { // On ne veut pas du server et du server db, on veut uniquement les clients
 				var context = (ServerContext)key.attachment();
-				context.queueMessage(msg.toByteBuffer());
+				context.queueMessage(msg.duplicate());
 			}
 		}
 	}
 
 	public static void main(String[] args) throws NumberFormatException, IOException {
-		if (args.length != 1){
+		if (args.length != 3){
 			usage();
 			return;
 		}
-		new ServerChatHack(Integer.parseInt(args[0])).launch();
+		new ServerChatHack(Integer.parseInt(args[0]), new InetSocketAddress(args[1], Integer.parseInt(args[2]))).launch();
 	}
 
 	private static void usage(){
-		System.out.println("Usage : ServerChatHack port ");
+		System.out.println("Usage : ServerChatHack portClient + hostname port server DB ");
 	}
 
 	/***

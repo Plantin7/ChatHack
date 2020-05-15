@@ -2,8 +2,8 @@ package fr.uge.nonblocking.readers.complexReader;
 
 import java.nio.ByteBuffer;
 
+import fr.uge.nonblocking.frame.PublicMessage;
 import fr.uge.nonblocking.readers.Reader;
-import fr.uge.nonblocking.readers.Reader.ProcessStatus;
 import fr.uge.nonblocking.readers.basicReader.ByteReader;
 
 public class OPMessageReader implements Reader<OPMessage> {
@@ -12,10 +12,10 @@ public class OPMessageReader implements Reader<OPMessage> {
 
     private State state = State.WAITING_OP;
     private byte op;
-    private Message message;
+    private PublicMessage message;
 
     private final ByteReader byteReader = new ByteReader();
-    private final MessageReader messageReader = new MessageReader();
+    private final PublicMessageReader messageReader = new PublicMessageReader();
 
     @Override
     public ProcessStatus process(ByteBuffer bb) {
@@ -72,5 +72,10 @@ public class OPMessageReader implements Reader<OPMessage> {
         byteReader.reset();
         messageReader.reset();
         message = null;
+    }
+    
+    @Override
+    public String toString() {
+    	return op + " " + message;
     }
 }

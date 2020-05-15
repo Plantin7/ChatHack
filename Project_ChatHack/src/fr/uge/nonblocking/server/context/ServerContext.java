@@ -8,29 +8,32 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.logging.Logger;
 
+import fr.uge.nonblocking.frame.Frame;
+import fr.uge.nonblocking.frame.ServerFrameVisitor;
 import fr.uge.nonblocking.readers.Reader;
-import fr.uge.nonblocking.readers.complexReader.Message;
-import fr.uge.nonblocking.readers.complexReader.MessageReader;
+import fr.uge.nonblocking.readers.complexReader.PublicMessageReader;
+import fr.uge.nonblocking.readers.complexReader.FrameReader;
+import fr.uge.nonblocking.readers.complexReader.OPMessageReader;
 import fr.uge.nonblocking.server.ServerChatHack;
 
 public class ServerContext {
-	static private int BUFFER_SIZE = 1_024;
+	static private int BUFFER_SIZE = 10_000;
 	static private Logger logger = Logger.getLogger(ServerContext.class.getName());
-	
+
 	final private SelectionKey key;
 	final private SocketChannel sc;
-	final private ByteBuffer bbin = ByteBuffer.allocate(2*Integer.BYTES + 2*BUFFER_SIZE);
-	final private ByteBuffer bbout = ByteBuffer.allocate(2*Integer.BYTES + 2*BUFFER_SIZE);
-	final private Queue<ByteBuffer> queue = new LinkedList<>();      // Queue de bytebuffer en read mode
-	final private MessageReader messageReader = new MessageReader();    
-	final private ServerChatHack server;
+	final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
+	final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
+	final private Queue<ByteBuffer> queue = new LinkedList<>();
+	final private FrameReader frameReader = new FrameReader();
+	private final ServerFrameVisitor frameVisitor;
 	private boolean closed = false;
-	
+
 
 	public ServerContext(ServerChatHack server, SelectionKey key){
 		this.key = key;
 		this.sc = (SocketChannel) key.channel();
-		this.server = server;
+		this.frameVisitor =  new ServerFrameVisitor(this, server);
 	}
 
 	/**
@@ -42,12 +45,12 @@ public class ServerContext {
 	 */
 	private void processIn() {
 		while(true) {
-			Reader.ProcessStatus status = messageReader.process(bbin);
+			Reader.ProcessStatus status = frameReader.process(bbin);
 			switch (status) {
 			case DONE:
-				Message message = messageReader.get();
-				server.broadcast(message);
-				messageReader.reset();
+				Frame frame = frameReader.get();
+				treatFrame(frame);
+				frameReader.reset();
 				break;
 			case REFILL:
 				return;
@@ -56,6 +59,10 @@ public class ServerContext {
 				return;
 			}
 		}
+	}
+
+	private void treatFrame(Frame frame) {
+		frame.accept(frameVisitor);
 	}
 
 	/**
@@ -159,4 +166,15 @@ public class ServerContext {
 		updateInterestOps();
 	}
 
+	public SelectionKey getKey() {
+		return key;
+	}
+
 }
+/**
+ * - Le server -> authentification d'un client par le server BDD  1 byte + 1 long + login + mdp
+ * - Réponse BDD server : (1)1 byte + long ou (0)1 byte + 1 long
+ * - Le server -> peut demander si un login existe (2) byte + id
+ * - Réponse BDD server : (1)1 byte + long ou (0)1 byte + 1 long
+ */
+
