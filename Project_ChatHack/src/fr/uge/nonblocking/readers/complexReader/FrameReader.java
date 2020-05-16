@@ -13,6 +13,7 @@ public class FrameReader implements Reader<Frame> {
 	private State state = State.WAITING_OP;
 
 	private PublicMessageReader publicMessageReader = new PublicMessageReader();
+	private AuthentificationReader authentificationReader = new AuthentificationReader();
 	private Reader<? extends Frame> currentFrameReader;
 	private Frame frame;
 	
@@ -38,7 +39,7 @@ public class FrameReader implements Reader<Frame> {
 				return ProcessStatus.ERROR;
 			}
 			case OPCODE_AUTH_WITH_PASSWORD : {
-				// TODO
+				currentFrameReader = authentificationReader;
 				break;
 			}
 			case OPCODE_AUTH_WITHOUT_PASSWORD: {

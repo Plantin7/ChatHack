@@ -12,7 +12,13 @@ public class ClientFrameVisitor implements FrameVisitor{
         this.clientChatHack = clientChatHack;
     }
 
+    @Override
     public void visit(PublicMessage publicMessage) {
     	clientChatHack.displayDialog(publicMessage);
+    }
+
+    @Override
+    public void visit(AuthentificationMessage authentificationMessage) {
+        clientChatHack.displayAuthentification(authentificationMessage);
     }
 }

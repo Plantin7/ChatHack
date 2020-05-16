@@ -119,6 +119,23 @@ public class ServerChatHack {
 		}
 	}
 
+	/**
+	 * Add a message to all connected clients queue
+	 *
+	 * @param msg
+	 */
+	public void broadcast(ByteBuffer msg, SelectionKey sk) {
+		for (var key : selector.keys()) {
+			if(key.isValid() && key != serverKey && key != dbKey && key == sk) { // On ne veut pas du server et du server db, on veut uniquement les clients
+				var context = (ServerContext)key.attachment();
+				context.queueMessage(msg.duplicate());
+			}
+		}
+	}
+
+
+
+
 	public static void main(String[] args) throws NumberFormatException, IOException {
 		if (args.length != 3){
 			usage();

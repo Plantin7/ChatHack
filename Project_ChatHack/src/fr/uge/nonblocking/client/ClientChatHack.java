@@ -14,6 +14,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Logger;
 
 import fr.uge.nonblocking.client.context.ClientContext;
+import fr.uge.nonblocking.frame.AuthentificationMessage;
 import fr.uge.nonblocking.frame.PublicMessage;
 import fr.uge.nonblocking.server.context.ServerContext;
 
@@ -111,7 +112,7 @@ public class ClientChatHack {
 	/**
 	 * Send a command to the selector via commandQueue and wake it up
 	 *
-	 * @param msg
+	 * @param
 	 * @throws InterruptedException
 	 */
 	private void sendCommand(Command cmd) throws InterruptedException {
@@ -132,7 +133,8 @@ public class ClientChatHack {
 				if(cmd == null) { return; }
 				switch (cmd) {
 				case AUTH: 
-					uniqueContext.queueMessage(ClientCommands.requestAuthentication(login, password));
+					//uniqueContext.queueMessage(ClientCommands.requestAuthentication(login, password));
+					uniqueContext.queueMessage(new AuthentificationMessage(login, password).asByteBuffer());
 					break;
 				case MESSAGE : 
 					uniqueContext.queueMessage(new PublicMessage(login, "Bonjour toi !").asByteBuffer());
@@ -189,7 +191,12 @@ public class ClientChatHack {
 		System.out.println("-------------------------------");
 		System.out.println(publicMessage);
 	}
-	
+
+	public void displayAuthentification(AuthentificationMessage authentificationMessage) {
+		System.out.println(authentificationMessage);
+	}
+
+
 	
 	public static void main(String[] args) throws NumberFormatException, IOException {
 		if (args.length != 4) {
