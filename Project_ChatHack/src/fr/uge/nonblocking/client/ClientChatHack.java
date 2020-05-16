@@ -16,6 +16,7 @@ import java.util.logging.Logger;
 import fr.uge.nonblocking.client.context.ClientContext;
 import fr.uge.nonblocking.frame.AuthentificationMessage;
 import fr.uge.nonblocking.frame.PublicMessage;
+import fr.uge.nonblocking.frame.ResponseAuthentification;
 import fr.uge.nonblocking.server.context.ServerContext;
 
 public class ClientChatHack {
@@ -75,41 +76,6 @@ public class ClientChatHack {
 	}
 
 	/**
-	 * 
-                if(stateConnection == StateConnection.DISCONNECTED) { // if client is not connected
-                    if (scan.toString().toUpperCase().equals("AUTH")) {
-                        sendAuthentification(login, password);
-                    }
-                } else {
-                    switch (scan.next().toUpperCase()) {
-                        case "/":
-                        case "@":
-                            var msg = scan.nextLine();
-                            sendCommand(msg);
-                            break;
-                        case "@login":
-                            // TODO : private message
-                            break;
-                        case "/login file":
-                            //TODO : private file
-                        default:
-                            throw new IllegalArgumentException("Unexpected command: " + scan.next());
-                    }
-                }
-                // stocker la correspondance entre le login et le contexte : map
-                // je donne tel id à tel contexte
-                // L'objet Context ne sera pas le même
-                // Client  1 -> négocier le login avec le serveur
-                // selecteur --> le même selecteur qui surveille toute les connexions ()
-                // filtrer si on est connecté ou non
-                //  traiter le paquet ou pas
-	 * 
-	 * 
-	 * 
-	 * 
-	 * 
-	 * */
-	/**
 	 * Send a command to the selector via commandQueue and wake it up
 	 *
 	 * @param
@@ -133,7 +99,6 @@ public class ClientChatHack {
 				if(cmd == null) { return; }
 				switch (cmd) {
 				case AUTH: 
-					//uniqueContext.queueMessage(ClientCommands.requestAuthentication(login, password));
 					uniqueContext.queueMessage(new AuthentificationMessage(login, password).asByteBuffer());
 					break;
 				case MESSAGE : 
@@ -188,14 +153,12 @@ public class ClientChatHack {
 	}
 	
 	public void displayDialog(PublicMessage publicMessage) {
-		System.out.println("-------------------------------");
 		System.out.println(publicMessage);
 	}
 
-	public void displayAuthentification(AuthentificationMessage authentificationMessage) {
-		System.out.println(authentificationMessage);
+	public void displayAuthentification(ResponseAuthentification responseAuthentification) {
+		System.out.println(responseAuthentification);
 	}
-
 
 	
 	public static void main(String[] args) throws NumberFormatException, IOException {

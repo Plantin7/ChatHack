@@ -10,10 +10,7 @@ import java.util.Queue;
 import fr.uge.nonblocking.client.ClientChatHack;
 import fr.uge.nonblocking.frame.ClientFrameVisitor;
 import fr.uge.nonblocking.frame.Frame;
-import fr.uge.nonblocking.frame.ServerFrameVisitor;
 import fr.uge.nonblocking.readers.complexReader.FrameReader;
-import fr.uge.nonblocking.readers.complexReader.OPMessageReader;
-import fr.uge.nonblocking.readers.complexReader.ResponseServerReader;
 
 public class ClientContext {
 	static private int BUFFER_SIZE = 10_000;
@@ -108,7 +105,6 @@ public class ClientContext {
 			interesOps |= SelectionKey.OP_WRITE;
 		}
 		if (interesOps == 0) {
-			System.out.println("JE RENTRE ICI");
 			silentlyClose();
 			return;
 		}

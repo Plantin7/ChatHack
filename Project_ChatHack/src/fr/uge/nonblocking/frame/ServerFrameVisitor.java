@@ -20,8 +20,13 @@ public class ServerFrameVisitor implements FrameVisitor {
 
     @Override
     public void visit(AuthentificationMessage authentificationMessage) {
-        server.broadcast(authentificationMessage.asByteBuffer(), ctx.getKey());
+        server.test(ctx.getKey());
     }
+
+	@Override
+	public void visit(ResponseAuthentification responseAuthentification) {
+		System.out.println("ServerFrameVisitor : TU NE DOIS PAS RENTRER ICI !");
+	}
 
     /*public void visit(PrivateMessage privateMessage) {
         //...

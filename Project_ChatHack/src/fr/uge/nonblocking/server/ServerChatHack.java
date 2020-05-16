@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import fr.uge.nonblocking.readers.complexReader.OPMessage;
+import fr.uge.nonblocking.frame.ResponseAuthentification;
 import fr.uge.nonblocking.server.context.ServerContext;
 
 public class ServerChatHack {
@@ -128,9 +128,15 @@ public class ServerChatHack {
 		for (var key : selector.keys()) {
 			if(key.isValid() && key != serverKey && key != dbKey && key == sk) { // On ne veut pas du server et du server db, on veut uniquement les clients
 				var context = (ServerContext)key.attachment();
-				context.queueMessage(msg.duplicate());
+				context.queueMessage(msg);
 			}
 		}
+	}
+	
+	public void test(SelectionKey sk) {
+		var context = (ServerContext)sk.attachment();
+		var response = new ResponseAuthentification("SALUT TU ES CONNECTE");
+		context.queueMessage(response.asByteBuffer());
 	}
 
 

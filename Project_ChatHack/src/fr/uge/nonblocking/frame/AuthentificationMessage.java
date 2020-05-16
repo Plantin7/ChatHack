@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets;
 
 public class AuthentificationMessage implements Frame {
 
-    private final byte OP = 1;
+    private final byte OP = 10;
     private final static Charset UTF8 = StandardCharsets.UTF_8;
     private final String login;
     private final String password;

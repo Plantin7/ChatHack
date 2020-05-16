@@ -14,6 +14,8 @@ public class FrameReader implements Reader<Frame> {
 
 	private PublicMessageReader publicMessageReader = new PublicMessageReader();
 	private AuthentificationReader authentificationReader = new AuthentificationReader();
+	private ResponseAuthentificationReader responseAuthentificationReader = new ResponseAuthentificationReader();
+	
 	private Reader<? extends Frame> currentFrameReader;
 	private Frame frame;
 	
@@ -32,25 +34,20 @@ public class FrameReader implements Reader<Frame> {
 			var currentOpcode = bb.get(); // Get the opcode
 			bb.compact();
 			
-			var opcode = ChatHackProtocol.values()[currentOpcode];
-			switch (opcode) {
-			case OPCODE_ERROR : { // OPCODE = 0 is not used in this protocol 
-				state = State.ERROR;
-				return ProcessStatus.ERROR;
-			}
-			case OPCODE_AUTH_WITH_PASSWORD : {
+			switch (currentOpcode) {
+			case 10 : {
 				currentFrameReader = authentificationReader;
 				break;
 			}
-			case OPCODE_AUTH_WITHOUT_PASSWORD: {
-				// TODO
+			case 11 : {
+				currentFrameReader = responseAuthentificationReader;
 				break;
 			}
-			case OPCODE_PUBLIC_MESSAGE : {
+			case 13 : {
 				currentFrameReader = publicMessageReader;
 				break;
 			}
-			case OPCODE_PRIVATE_MESSAGE : {
+			case 14 : {
 				break;
 			}
 			default:
