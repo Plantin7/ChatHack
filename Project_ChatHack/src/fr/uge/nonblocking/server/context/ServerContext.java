@@ -49,8 +49,8 @@ public class ServerContext {
 			switch (status) {
 			case DONE:
 				Frame frame = frameReader.get();
-				treatFrame(frame);
 				frameReader.reset();
+				treatFrame(frame);
 				break;
 			case REFILL:
 				return;

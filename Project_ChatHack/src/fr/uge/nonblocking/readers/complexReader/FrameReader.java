@@ -4,79 +4,78 @@ import java.nio.ByteBuffer;
 
 import fr.uge.nonblocking.frame.Frame;
 import fr.uge.nonblocking.readers.Reader;
-import fr.uge.nonblocking.readers.basicReader.ByteReader;
+import fr.uge.protocol.ChatHackProtocol;
 
 public class FrameReader implements Reader<Frame> {
 
-	private enum Status {
-		DONE, WAITING_OP, WAITING_FRAME, ERROR
-	}
+	private enum State { DONE, WAITING_OP, WAITING_FRAME, ERROR }
 
-	private enum OP {
-	} // TODO
+	private State state = State.WAITING_OP;
 
-	private byte op;
-	private Frame frame;
-	private Status status = Status.WAITING_OP;
-
-	private ByteReader byteReader = new ByteReader();
 	private PublicMessageReader publicMessageReader = new PublicMessageReader();
-
+	private Reader<? extends Frame> currentFrameReader;
+	private Frame frame;
+	
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
-		if (status == Status.DONE || status == Status.ERROR) {
+		if (state == State.DONE || state == State.ERROR) {
 			throw new IllegalStateException();
 		}
-		switch (status) {
+		switch (state) {
 		case WAITING_OP: {
-			var state = getPart(byteReader, bb);
-			if (state != ProcessStatus.DONE) {
-				return state;
+			bb.flip();
+			if(!bb.hasRemaining()) {
+				bb.compact();
+				return ProcessStatus.REFILL;
 			}
-			op = byteReader.get();
-			status = Status.WAITING_FRAME;
+			var currentOpcode = bb.get(); // Get the opcode
+			bb.compact();
+			
+			var opcode = ChatHackProtocol.values()[currentOpcode];
+			switch (opcode) {
+			case OPCODE_ERROR : { // OPCODE = 0 is not used in this protocol 
+				state = State.ERROR;
+				return ProcessStatus.ERROR;
+			}
+			case OPCODE_AUTH_WITH_PASSWORD : {
+				// TODO
+				break;
+			}
+			case OPCODE_AUTH_WITHOUT_PASSWORD: {
+				// TODO
+				break;
+			}
+			case OPCODE_PUBLIC_MESSAGE : {
+				currentFrameReader = publicMessageReader;
+				break;
+			}
+			case OPCODE_PRIVATE_MESSAGE : {
+				break;
+			}
+			default:
+				state = State.ERROR;
+				return ProcessStatus.ERROR;
+			}
+			
+			state = State.WAITING_FRAME;
 		}
 		case WAITING_FRAME: {
-			switch (op) {
-			case 1: {
-				// TODO
-				status = Status.DONE;
-				return ProcessStatus.DONE;
+			var status = getPart(bb);
+			if (status != ProcessStatus.DONE) {
+				return status;
 			}
-			case 2: {
-				// TODO
-				status = Status.DONE;
-				return ProcessStatus.DONE;
-			}
-			case 3: {
-				// TODO
-				status = Status.DONE;
-				return ProcessStatus.DONE;
-			}
-			case 4: {
-				// TODO
-				status = Status.DONE;
-				return ProcessStatus.DONE;
-			}
-			case 5: {
-				var state = getPart(publicMessageReader, bb);
-				if (state != ProcessStatus.DONE) {
-					return state;
-				}
-				frame = publicMessageReader.get();
-				
-				status = Status.DONE;
-				return ProcessStatus.DONE;
-			}
-			}
+			
+			frame = currentFrameReader.get();
+			state = State.DONE;
+			return ProcessStatus.DONE;
 		}
 		default:
-			throw new IllegalStateException();
+			throw new IllegalArgumentException("Unexpected value: " + state);
 		}
 	}
 
-	private ProcessStatus getPart(Reader<?> reader, ByteBuffer bb) {
-		Reader.ProcessStatus status = reader.process(bb);
+	private ProcessStatus getPart(ByteBuffer bb) {
+		Reader.ProcessStatus status = currentFrameReader.process(bb);
 		switch (status) {
 		case DONE:
 			return ProcessStatus.DONE;
@@ -87,10 +86,10 @@ public class FrameReader implements Reader<Frame> {
 		}
 		throw new AssertionError();
 	}
-
+	
 	@Override
 	public Frame get() {
-		if (status != Status.DONE) {
+		if (state != State.DONE) {
 			throw new IllegalStateException();
 		}
 		return frame;
@@ -98,9 +97,9 @@ public class FrameReader implements Reader<Frame> {
 
 	@Override
 	public void reset() {
-		status = Status.WAITING_OP;
-		byteReader.reset();
+		state = State.WAITING_OP;
 		publicMessageReader.reset();
+		currentFrameReader.reset();
 		frame = null;
 	}
 

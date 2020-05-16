@@ -46,8 +46,8 @@ public class ClientContext {
 			switch (status) {
 			case DONE:
 				Frame frame = frameReader.get();
-				treatFrame(frame);
 				frameReader.reset();
+				treatFrame(frame);
 				break;
 			case REFILL:
 				return;
@@ -108,6 +108,7 @@ public class ClientContext {
 			interesOps |= SelectionKey.OP_WRITE;
 		}
 		if (interesOps == 0) {
+			System.out.println("JE RENTRE ICI");
 			silentlyClose();
 			return;
 		}

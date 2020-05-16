@@ -3,8 +3,6 @@ package fr.uge.nonblocking.readers.complexReader;
 import java.nio.ByteBuffer;
 
 import fr.uge.nonblocking.readers.Reader;
-import fr.uge.nonblocking.readers.Reader.ProcessStatus;
-import fr.uge.nonblocking.readers.basicReader.ByteReader;
 import fr.uge.nonblocking.readers.basicReader.LongReader;
 
 public class ResponseServerReader implements Reader<ResponseServer> {
@@ -15,7 +13,6 @@ public class ResponseServerReader implements Reader<ResponseServer> {
 	private byte op;
 	private long id;
 
-	private final ByteReader byteReader = new ByteReader();
 	private final LongReader longReader = new LongReader();
 
 	@Override
@@ -25,11 +22,14 @@ public class ResponseServerReader implements Reader<ResponseServer> {
 		}
 		switch(state) {
 		case WAITING_OP: {
-			var stateOp = getPart(byteReader, bb);
-			if(stateOp != ProcessStatus.DONE) {
-				return stateOp;
+			bb.flip();
+			if(!bb.hasRemaining()) {
+				bb.compact();
+				return ProcessStatus.REFILL;
 			}
-			op = byteReader.get();
+			op = bb.get(); // Get the opcode
+			bb.compact();
+			
 			state = State.WAITING_ID;
 		}
 		case WAITING_ID: {
@@ -68,7 +68,6 @@ public class ResponseServerReader implements Reader<ResponseServer> {
 	@Override
 	public void reset() {
 		state = State.WAITING_OP;
-		byteReader.reset();
 		longReader.reset();
 
 	}

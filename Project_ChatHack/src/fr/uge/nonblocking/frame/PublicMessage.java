@@ -8,7 +8,7 @@ public class PublicMessage implements Frame {
 	private final String from;
 	private final String message;
 	private final static Charset UTF8 = Charset.forName("UTF-8");
-	private final byte OP = 5;
+	private final byte OP = 3;
 	
 	public PublicMessage(String from, String message) {
 		this.from = from;

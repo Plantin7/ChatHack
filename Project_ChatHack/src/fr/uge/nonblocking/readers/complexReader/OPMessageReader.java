@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 
 import fr.uge.nonblocking.frame.PublicMessage;
 import fr.uge.nonblocking.readers.Reader;
-import fr.uge.nonblocking.readers.basicReader.ByteReader;
+import fr.uge.nonblocking.readers.Reader.ProcessStatus;
 
 public class OPMessageReader implements Reader<OPMessage> {
 
@@ -14,7 +14,6 @@ public class OPMessageReader implements Reader<OPMessage> {
     private byte op;
     private PublicMessage message;
 
-    private final ByteReader byteReader = new ByteReader();
     private final PublicMessageReader messageReader = new PublicMessageReader();
 
     @Override
@@ -24,11 +23,14 @@ public class OPMessageReader implements Reader<OPMessage> {
         }
         switch (state) {
             case WAITING_OP: {
-                var stateOp = getPart(byteReader, bb);
-                if (stateOp != ProcessStatus.DONE) {
-                    return stateOp;
-                }
-                op = byteReader.get();
+    			bb.flip();
+    			if(!bb.hasRemaining()) {
+    				bb.compact();
+    				return ProcessStatus.REFILL;
+    			}
+    			op = bb.get(); // Get the opcode
+    			bb.compact();
+    			
                 state = State.WAITING_MSG;
             }
             case WAITING_MSG: {
@@ -69,7 +71,6 @@ public class OPMessageReader implements Reader<OPMessage> {
     @Override
     public void reset() {
         state = State.WAITING_OP;
-        byteReader.reset();
         messageReader.reset();
         message = null;
     }

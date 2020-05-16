@@ -13,8 +13,6 @@ public class ClientFrameVisitor implements FrameVisitor{
     }
 
     public void visit(PublicMessage publicMessage) {
-    	//ctx.queueMessage(publicMessage.asByteBuffer());
-    	//System.out.println(publicMessage);
     	clientChatHack.displayDialog(publicMessage);
     }
 }
