@@ -166,7 +166,7 @@ public class ClientChatHack {
 			usage();
 			return;
 		}
-		new ClientChatHack(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[2], args[3], " ").launch();
+		new ClientChatHack(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[2], args[3], "work").launch();
 	}
 
 	private static void usage() {

@@ -3,12 +3,12 @@ package fr.uge.nonblocking.frame;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
+import fr.uge.protocol.ChatHackProtocol;
+
 public class PublicMessage implements Frame {
-	
 	private final String from;
 	private final String message;
 	private final static Charset UTF8 = Charset.forName("UTF-8");
-	private final byte OP = 13;
 	
 	public PublicMessage(String from, String message) {
 		this.from = from;
@@ -20,7 +20,7 @@ public class PublicMessage implements Frame {
 		var bbLogin = UTF8.encode(from);
 		var bbMessage = UTF8.encode(message);
 		var bb = ByteBuffer.allocate(Byte.BYTES + 2*Integer.BYTES + bbLogin.limit() + bbMessage.limit());
-		bb.put(OP).putInt(bbLogin.limit()).put(bbLogin).putInt(bbMessage.limit()).put(bbMessage).flip();
+		bb.put(ChatHackProtocol.OPCODE_PUBLIC_MESSAGE).putInt(bbLogin.limit()).put(bbLogin).putInt(bbMessage.limit()).put(bbMessage).flip();
 		return bb;
 	}
 	

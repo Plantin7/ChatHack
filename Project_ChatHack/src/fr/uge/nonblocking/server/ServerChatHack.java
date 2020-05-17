@@ -13,8 +13,12 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import fr.uge.nonblocking.frame.AuthentificationMessage;
+import fr.uge.nonblocking.frame.DB;
 import fr.uge.nonblocking.frame.ResponseAuthentification;
+import fr.uge.nonblocking.server.context.DBContext;
 import fr.uge.nonblocking.server.context.ServerContext;
+import fr.uge.protocol.ChatHackProtocol;
 
 public class ServerChatHack {
 	
@@ -22,14 +26,15 @@ public class ServerChatHack {
 	/* -------------------------------- CLIENT CHAT HACK ----------------------------------------*/
 	private final InetSocketAddress serverDB;
 	private final SocketChannel socketChannel;
-	private SelectionKey dbKey;
+	private DBContext dbContext;
 	private final static Charset UTF8 = StandardCharsets.UTF_8;
 
 	/* -------------------------------- SERVER CHAT HACK ----------------------------------------*/
 	private final ServerSocketChannel serverSocketChannel;
-	private final HashMap<Long, SelectionKey> map = new HashMap<>();
+	private final HashMap<Long, ServerContext> map = new HashMap<>();
 	private final Selector selector;
 	private SelectionKey serverKey;
+	private long id = 0;
 
 	public ServerChatHack(int port, InetSocketAddress serverDB) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
@@ -46,8 +51,9 @@ public class ServerChatHack {
 		
 		socketChannel.connect(serverDB);
 		socketChannel.configureBlocking(false);
-		dbKey = socketChannel.register(selector, SelectionKey.OP_READ);
-		//enregitre mon contexte
+		var dbKey = socketChannel.register(selector, SelectionKey.OP_READ);
+		dbContext = new DBContext(this, dbKey);
+		dbKey.attach(dbContext);
 
 		
 		while(!Thread.interrupted()) {
@@ -74,10 +80,20 @@ public class ServerChatHack {
 		}
 		try {
 			if (key.isValid() && key.isWritable()) {
-				((ServerContext) key.attachment()).doWrite();
+				if(key == dbContext.getKey()) {
+					((DBContext) key.attachment()).doWrite();
+				}
+				else {
+					((ServerContext) key.attachment()).doWrite();
+				}
 			}
 			if (key.isValid() && key.isReadable()) {
-				((ServerContext) key.attachment()).doRead();
+				if(key == dbContext.getKey()) {
+					((DBContext) key.attachment()).doRead();
+				}
+				else {
+					((ServerContext) key.attachment()).doRead();
+				}
 			}
 		} catch (IOException e) {
 			logger.log(Level.INFO,"Connection closed with client due to IOException",e);
@@ -92,8 +108,10 @@ public class ServerChatHack {
 		}
 		sc.configureBlocking(false);
 		var client = sc.register(selector, SelectionKey.OP_READ);
-		var context = new ServerContext(this, client);
+		var context = new ServerContext(this, client, id);
 		client.attach(context);
+		map.put(id,context);
+		id++;
 	}
 
 	private void silentlyClose(SelectionKey key) {
@@ -112,34 +130,38 @@ public class ServerChatHack {
 	 */
 	public void broadcast(ByteBuffer msg) {
 		for (var key : selector.keys()) { 
-			if(key.isValid() && key != serverKey && key != dbKey) { // On ne veut pas du server et du server db, on veut uniquement les clients
+			if(key.isValid() && key != serverKey && key != dbContext.getKey()) { // On ne veut pas du server et du server db, on veut uniquement les clients
 				var context = (ServerContext)key.attachment();
 				context.queueMessage(msg.duplicate());
 			}
 		}
 	}
-
-	/**
-	 * Add a message to all connected clients queue
-	 *
-	 * @param msg
-	 */
-	public void broadcast(ByteBuffer msg, SelectionKey sk) {
-		for (var key : selector.keys()) {
-			if(key.isValid() && key != serverKey && key != dbKey && key == sk) { // On ne veut pas du server et du server db, on veut uniquement les clients
-				var context = (ServerContext)key.attachment();
-				context.queueMessage(msg);
-			}
-		}
+	
+	public void sendAuthentificationToDB(AuthentificationMessage auth, ServerContext context) {
+		System.out.println("----------------------- DEBUG MODE --------------------------------");
+		var id = context.getId();
+		var bbLogin = UTF8.encode(auth.getLogin());
+		var bbPassword = UTF8.encode(auth.getPassword());
+		var bb = ByteBuffer.allocate(Byte.BYTES + Long.BYTES + 2 * Integer.BYTES + bbLogin.limit() + bbPassword.limit());
+		bb.put(ChatHackProtocol.OPCODE_ASK_AUTH_TO_DB).putLong(id).putInt(bbLogin.limit()).put(bbLogin).putInt(bbPassword.limit()).put(bbPassword).flip();
+		dbContext.queueMessage(bb);
 	}
 	
-	public void test(SelectionKey sk) {
-		var context = (ServerContext)sk.attachment();
-		var response = new ResponseAuthentification("SALUT TU ES CONNECTE");
-		context.queueMessage(response.asByteBuffer());
+	public void sendToClientResponseOfDB(DB dbResponse) {
+		var clientContext = map.get(dbResponse.getId());
+		ResponseAuthentification response;
+		if(dbResponse.getOpcode() == 1) {
+			response = new ResponseAuthentification("Connected");
+		}
+		else if (dbResponse.getOpcode() == 0) {
+			response = new ResponseAuthentification("Login or password incorrect !");
+		}
+		else {
+			throw new IllegalStateException("The DB Server doesn't respect the protocol");
+		}
+		
+		clientContext.queueMessage(response.asByteBuffer());
 	}
-
-
 
 
 	public static void main(String[] args) throws NumberFormatException, IOException {
@@ -215,5 +237,9 @@ public class ServerChatHack {
 		if (key.isReadable()) list.add("READ");
 		if (key.isWritable()) list.add("WRITE");
 		return String.join(" and ",list);
+	}
+	
+	private long getId() {
+		return id;
 	}
 }

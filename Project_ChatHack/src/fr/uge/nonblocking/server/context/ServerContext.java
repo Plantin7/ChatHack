@@ -13,7 +13,6 @@ import fr.uge.nonblocking.frame.ServerFrameVisitor;
 import fr.uge.nonblocking.readers.Reader;
 import fr.uge.nonblocking.readers.complexReader.PublicMessageReader;
 import fr.uge.nonblocking.readers.complexReader.FrameReader;
-import fr.uge.nonblocking.readers.complexReader.OPMessageReader;
 import fr.uge.nonblocking.server.ServerChatHack;
 
 public class ServerContext {
@@ -22,6 +21,7 @@ public class ServerContext {
 
 	final private SelectionKey key;
 	final private SocketChannel sc;
+	final private long id;
 	final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
 	final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
 	final private Queue<ByteBuffer> queue = new LinkedList<>();
@@ -30,10 +30,11 @@ public class ServerContext {
 	private boolean closed = false;
 
 
-	public ServerContext(ServerChatHack server, SelectionKey key){
+	public ServerContext(ServerChatHack server, SelectionKey key, long id){
 		this.key = key;
 		this.sc = (SocketChannel) key.channel();
 		this.frameVisitor =  new ServerFrameVisitor(this, server);
+		this.id = id;
 	}
 
 	/**
@@ -168,6 +169,10 @@ public class ServerContext {
 
 	public SelectionKey getKey() {
 		return key;
+	}
+	
+	public long getId() {
+		return id;
 	}
 
 }

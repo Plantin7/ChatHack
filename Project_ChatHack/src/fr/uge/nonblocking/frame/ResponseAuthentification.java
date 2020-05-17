@@ -3,10 +3,11 @@ package fr.uge.nonblocking.frame;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
+import fr.uge.protocol.ChatHackProtocol;
+
 public class ResponseAuthentification implements Frame{
 	private final String message;
 	private final static Charset UTF8 = Charset.forName("UTF-8");
-	private final byte OP = 11;
 	
 	public ResponseAuthentification(String message) {
 		this.message = message;
@@ -16,7 +17,7 @@ public class ResponseAuthentification implements Frame{
 	public ByteBuffer asByteBuffer() {
 		var bbMessage = UTF8.encode(message);
 		var bb = ByteBuffer.allocate(Byte.BYTES + Integer.BYTES + bbMessage.limit());
-		bb.put(OP).putInt(bbMessage.limit()).put(bbMessage).flip();
+		bb.put(ChatHackProtocol.OPCODE_RESPONSE_AUTH_WITH_PASSWORD).putInt(bbMessage.limit()).put(bbMessage).flip();
 		return bb;
 	}
 	

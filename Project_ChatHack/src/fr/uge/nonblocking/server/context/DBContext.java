@@ -8,26 +8,32 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.logging.Logger;
 
+import fr.uge.nonblocking.client.context.ClientContext;
+import fr.uge.nonblocking.frame.ResponseAuthentification;
 import fr.uge.nonblocking.readers.Reader;
+import fr.uge.nonblocking.readers.complexReader.DBReader;
 import fr.uge.nonblocking.readers.complexReader.PublicMessageReader;
 import fr.uge.nonblocking.server.ServerChatHack;
+import fr.uge.protocol.ChatHackProtocol;
 
 public class DBContext {
-    static private int BUFFER_SIZE = 1_024;
+    static private int BUFFER_SIZE = 10_000;
     static private Logger logger = Logger.getLogger(DBContext.class.getName());
 
     final private SelectionKey key;
     final private SocketChannel sc;
-    final private ByteBuffer bbin = ByteBuffer.allocate(2 * Integer.BYTES + 2 * BUFFER_SIZE);
-    final private ByteBuffer bbout = ByteBuffer.allocate(2 * Integer.BYTES + 2 * BUFFER_SIZE);
+    final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
+    final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
     final private Queue<ByteBuffer> queue = new LinkedList<>();      // Queue de bytebuffer en read mode
-    final private PublicMessageReader messageReader = new PublicMessageReader();
+    final private DBReader dbReader = new DBReader();
+    final private ServerChatHack server;
     private boolean closed = false;
 
 
     public DBContext(ServerChatHack server, SelectionKey key) {
         this.key = key;
         this.sc = (SocketChannel) key.channel();
+        this.server = server;
     }
 
     /**
@@ -38,11 +44,13 @@ public class DBContext {
      */
     private void processIn() {
         while (true) {
-            Reader.ProcessStatus status = messageReader.process(bbin); // BddResponseReader
+            Reader.ProcessStatus status = dbReader.process(bbin); // BddResponseReader
             switch (status) {
                 case DONE:
-                    var message = messageReader.get();
-                    messageReader.reset();
+                    var responseOfDB = dbReader.get();
+                    System.out.println("DBContext DONE : "+ responseOfDB);
+                    server.sendToClientResponseOfDB(responseOfDB);
+                    dbReader.reset();
                     break;
                 case REFILL:
                     return;
@@ -70,8 +78,8 @@ public class DBContext {
     private void processOut() {
         while (!queue.isEmpty()) {
             var bb = queue.peek();
-            if (bb.remaining() <= bbout.remaining()) { // suffisament grand pour contenir un message
-                bbout.put(queue.poll()); // the size of msg will not exceed 2056 octets
+            if (bb.remaining() <= bbout.remaining()) {
+                bbout.put(queue.poll());
             } else {
                 return;
             }
@@ -150,6 +158,10 @@ public class DBContext {
         }
         processOut();
         updateInterestOps();
+    }
+    
+    public SelectionKey getKey() {
+    	return key;
     }
 
 }

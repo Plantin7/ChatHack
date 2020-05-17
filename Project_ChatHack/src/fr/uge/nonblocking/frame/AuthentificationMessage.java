@@ -4,9 +4,10 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
+import fr.uge.protocol.ChatHackProtocol;
+
 public class AuthentificationMessage implements Frame {
 
-    private final byte OP = 10;
     private final static Charset UTF8 = StandardCharsets.UTF_8;
     private final String login;
     private final String password;
@@ -21,14 +22,22 @@ public class AuthentificationMessage implements Frame {
         var bbLogin = UTF8.encode(login);
         var bbPassword = UTF8.encode(password);
         var bb = ByteBuffer.allocate(Byte.BYTES + 2 * Integer.BYTES + bbLogin.limit() + bbPassword.limit());
-        bb.put(OP).putInt(bbLogin.limit()).put(bbLogin).putInt(bbPassword.limit()).put(bbPassword).flip();
+        bb.put(ChatHackProtocol.OPCODE_ASK_AUTH_WITH_PASSWORD).putInt(bbLogin.limit()).put(bbLogin).putInt(bbPassword.limit()).put(bbPassword).flip();
         return bb;
+    }
+    
+    public String getLogin() {
+    	return login;
+    }
+    
+    public String getPassword() {
+    	return password;
     }
 
     @Override
     public String toString() {
         return "AuthentificationMessage{" +
-                "OP=" + OP +
+                "OP=" + ChatHackProtocol.OPCODE_ASK_AUTH_WITH_PASSWORD +
                 ", login='" + login + '\'' +
                 ", password='" + password + '\'' +
                 '}';

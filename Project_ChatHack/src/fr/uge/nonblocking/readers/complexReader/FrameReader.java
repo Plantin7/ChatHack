@@ -27,27 +27,28 @@ public class FrameReader implements Reader<Frame> {
 		switch (state) {
 		case WAITING_OP: {
 			bb.flip();
-			if(!bb.hasRemaining()) {
-				bb.compact();
-				return ProcessStatus.REFILL;
+			byte currentOpcode;
+			try {
+				if(!bb.hasRemaining()) {
+					return ProcessStatus.REFILL;
+				}
+				currentOpcode = bb.get(); // Get the opcode
 			}
-			var currentOpcode = bb.get(); // Get the opcode
-			bb.compact();
+			finally {
+				bb.compact();
+			}
 			
 			switch (currentOpcode) {
-			case 10 : {
+			case ChatHackProtocol.OPCODE_ASK_AUTH_WITH_PASSWORD : {
 				currentFrameReader = authentificationReader;
 				break;
 			}
-			case 11 : {
+			case ChatHackProtocol.OPCODE_RESPONSE_AUTH_WITH_PASSWORD : {
 				currentFrameReader = responseAuthentificationReader;
 				break;
 			}
-			case 13 : {
+			case ChatHackProtocol.OPCODE_PUBLIC_MESSAGE: {
 				currentFrameReader = publicMessageReader;
-				break;
-			}
-			case 14 : {
 				break;
 			}
 			default:

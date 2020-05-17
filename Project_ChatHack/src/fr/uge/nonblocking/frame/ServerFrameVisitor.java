@@ -20,7 +20,7 @@ public class ServerFrameVisitor implements FrameVisitor {
 
     @Override
     public void visit(AuthentificationMessage authentificationMessage) {
-        server.test(ctx.getKey());
+        server.sendAuthentificationToDB(authentificationMessage, ctx);
     }
 
 	@Override
