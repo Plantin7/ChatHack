@@ -8,7 +8,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 import fr.uge.nonblocking.client.ClientChatHack;
-import fr.uge.nonblocking.frame.ClientFrameVisitor;
+import fr.uge.nonblocking.visitors.ClientFrameVisitor;
 import fr.uge.nonblocking.frame.Frame;
 import fr.uge.nonblocking.readers.complexReader.FrameReader;
 

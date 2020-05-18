@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
+import fr.uge.nonblocking.visitors.FrameVisitor;
 import fr.uge.protocol.ChatHackProtocol;
 
 public class AuthentificationMessage implements Frame {

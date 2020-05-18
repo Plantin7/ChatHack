@@ -1,5 +1,7 @@
 package fr.uge.nonblocking.frame;
 
+import fr.uge.nonblocking.visitors.FrameVisitor;
+
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;

@@ -1,9 +1,10 @@
-package fr.uge.nonblocking.frame;
+package fr.uge.nonblocking.visitors;
 
 import fr.uge.nonblocking.client.ClientChatHack;
 import fr.uge.nonblocking.client.context.ClientContext;
+import fr.uge.nonblocking.frame.*;
 
-public class ClientFrameVisitor implements FrameVisitor{
+public class ClientFrameVisitor implements FrameVisitor {
     private final ClientContext ctx;
     private final ClientChatHack clientChatHack;
 

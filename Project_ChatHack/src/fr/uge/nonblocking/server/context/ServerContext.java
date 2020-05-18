@@ -9,9 +9,8 @@ import java.util.Queue;
 import java.util.logging.Logger;
 
 import fr.uge.nonblocking.frame.Frame;
-import fr.uge.nonblocking.frame.ServerFrameVisitor;
+import fr.uge.nonblocking.visitors.ServerFrameVisitor;
 import fr.uge.nonblocking.readers.Reader;
-import fr.uge.nonblocking.readers.complexReader.PublicMessageReader;
 import fr.uge.nonblocking.readers.complexReader.FrameReader;
 import fr.uge.nonblocking.server.ServerChatHack;
 

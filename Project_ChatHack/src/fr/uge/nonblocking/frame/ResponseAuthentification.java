@@ -3,6 +3,7 @@ package fr.uge.nonblocking.frame;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
+import fr.uge.nonblocking.visitors.FrameVisitor;
 import fr.uge.protocol.ChatHackProtocol;
 
 public class ResponseAuthentification implements Frame{

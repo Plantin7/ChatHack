@@ -1,5 +1,6 @@
-package fr.uge.nonblocking.frame;
+package fr.uge.nonblocking.visitors;
 
+import fr.uge.nonblocking.frame.*;
 import fr.uge.nonblocking.server.ServerChatHack;
 import fr.uge.nonblocking.server.context.ServerContext;
 
