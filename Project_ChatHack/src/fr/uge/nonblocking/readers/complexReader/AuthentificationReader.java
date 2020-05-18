@@ -11,7 +11,6 @@ public class AuthentificationReader implements Reader<AuthentificationMessage> {
     private enum State {DONE, WAITING_LOGIN, WAITING_PASSWORD, ERROR}
 
     private State state = State.WAITING_LOGIN;
-    private byte op;
     private String login;
     private String password;
     private final StringReader stringReader = new StringReader();

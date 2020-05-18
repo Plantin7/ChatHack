@@ -20,10 +20,17 @@ public class AuthentificationMessage implements Frame {
     @Override
     public ByteBuffer asByteBuffer() {
         var bbLogin = UTF8.encode(login);
-        var bbPassword = UTF8.encode(password);
-        var bb = ByteBuffer.allocate(Byte.BYTES + 2 * Integer.BYTES + bbLogin.limit() + bbPassword.limit());
-        bb.put(ChatHackProtocol.OPCODE_ASK_AUTH_WITH_PASSWORD).putInt(bbLogin.limit()).put(bbLogin).putInt(bbPassword.limit()).put(bbPassword).flip();
-        return bb;
+        ByteBuffer bb;
+        if(!password.isEmpty()) {
+            var bbPassword = UTF8.encode(password);
+            bb = ByteBuffer.allocate(Byte.BYTES + 2 * Integer.BYTES + bbLogin.limit() + bbPassword.limit());
+            bb.put(ChatHackProtocol.OPCODE_ASK_AUTH_WITH_PASSWORD).putInt(bbLogin.limit()).put(bbLogin).putInt(bbPassword.limit()).put(bbPassword);
+        }
+        else {
+            bb = ByteBuffer.allocate(Byte.BYTES + Integer.BYTES + bbLogin.limit());
+            bb.put(ChatHackProtocol.OPCODE_ASK_AUTH_WITHOUT_PASSWORD).putInt(bbLogin.limit()).put(bbLogin);
+        }
+        return bb.flip();
     }
     
     public String getLogin() {

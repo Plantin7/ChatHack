@@ -9,6 +9,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -16,12 +17,14 @@ import java.util.logging.Logger;
 import fr.uge.nonblocking.frame.AuthentificationMessage;
 import fr.uge.nonblocking.frame.DB;
 import fr.uge.nonblocking.frame.ResponseAuthentification;
+import fr.uge.nonblocking.frame.StringMessage;
 import fr.uge.nonblocking.server.context.DBContext;
 import fr.uge.nonblocking.server.context.ServerContext;
+import fr.uge.nonblocking.server.context.ServerContext.ConnectionTypes;
 import fr.uge.protocol.ChatHackProtocol;
 
 public class ServerChatHack {
-	
+
 	static private Logger logger = Logger.getLogger(ServerChatHack.class.getName());
 	/* -------------------------------- CLIENT CHAT HACK ----------------------------------------*/
 	private final InetSocketAddress serverDB;
@@ -31,7 +34,7 @@ public class ServerChatHack {
 
 	/* -------------------------------- SERVER CHAT HACK ----------------------------------------*/
 	private final ServerSocketChannel serverSocketChannel;
-	private final HashMap<Long, ServerContext> map = new HashMap<>();
+	private final HashMap<String, ServerContext> map = new HashMap<>();
 	private final Selector selector;
 	private SelectionKey serverKey;
 	private long id = 0;
@@ -43,19 +46,18 @@ public class ServerChatHack {
 		this.serverDB = serverDB;
 		this.socketChannel = SocketChannel.open();
 	}
-	
+
 	public void launch() throws IOException {
-		
+
 		serverSocketChannel.configureBlocking(false);
 		serverKey = serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
-		
+
 		socketChannel.connect(serverDB);
 		socketChannel.configureBlocking(false);
 		var dbKey = socketChannel.register(selector, SelectionKey.OP_READ);
 		dbContext = new DBContext(this, dbKey);
 		dbKey.attach(dbContext);
 
-		
 		while(!Thread.interrupted()) {
 			printKeys(); // for debug
 			System.out.println("Starting select");
@@ -65,6 +67,7 @@ public class ServerChatHack {
 				throw tunneled.getCause();
 			}
 			System.out.println("Select finished");
+			
 		}
 	}
 
@@ -110,13 +113,14 @@ public class ServerChatHack {
 		var client = sc.register(selector, SelectionKey.OP_READ);
 		var context = new ServerContext(this, client, id);
 		client.attach(context);
-		map.put(id,context);
 		id++;
 	}
 
 	private void silentlyClose(SelectionKey key) {
 		Channel sc = (Channel) key.channel();
+		var context = (ServerContext)key.attachment();
 		try {
+			deleteElementFromId(context.getId());
 			sc.close();
 		} catch (IOException e) {
 			// ignore exception
@@ -136,31 +140,102 @@ public class ServerChatHack {
 			}
 		}
 	}
-	
+
 	public void sendAuthentificationToDB(AuthentificationMessage auth, ServerContext context) {
-		System.out.println("----------------------- DEBUG MODE --------------------------------");
-		var id = context.getId();
-		var bbLogin = UTF8.encode(auth.getLogin());
-		var bbPassword = UTF8.encode(auth.getPassword());
-		var bb = ByteBuffer.allocate(Byte.BYTES + Long.BYTES + 2 * Integer.BYTES + bbLogin.limit() + bbPassword.limit());
-		bb.put(ChatHackProtocol.OPCODE_ASK_AUTH_TO_DB).putLong(id).putInt(bbLogin.limit()).put(bbLogin).putInt(bbPassword.limit()).put(bbPassword).flip();
-		dbContext.queueMessage(bb);
-	}
-	
-	public void sendToClientResponseOfDB(DB dbResponse) {
-		var clientContext = map.get(dbResponse.getId());
-		ResponseAuthentification response;
-		if(dbResponse.getOpcode() == 1) {
-			response = new ResponseAuthentification("Connected");
+		if(!map.containsKey(auth.getLogin())) {
+			map.put(auth.getLogin(), context);
+			var id = context.getId();
+			var bbLogin = UTF8.encode(auth.getLogin());
+			context.setConnectionTypeValidated();
+			var bbPassword = UTF8.encode(auth.getPassword());
+			var bb = ByteBuffer.allocate(Byte.BYTES + Long.BYTES + 2 * Integer.BYTES + bbLogin.limit() + bbPassword.limit());
+			bb.put(ChatHackProtocol.OPCODE_ASK_AUTH_TO_DB_WITH_PASWWORD).putLong(id).putInt(bbLogin.limit()).put(bbLogin).putInt(bbPassword.limit()).put(bbPassword).flip();
+			dbContext.queueMessage(bb);			
 		}
-		else if (dbResponse.getOpcode() == 0) {
-			response = new ResponseAuthentification("Login or password incorrect !");
+		else {
+			context.queueMessage(new ResponseAuthentification("Login already in use").asByteBuffer());
+			context.silentlyInputClose();
+		}
+	}
+
+	public void sendAnonymousAuthentificationToDB(StringMessage auth, ServerContext context) {
+		if(!map.containsKey(auth.getStringMessage())) {
+			map.put(auth.getStringMessage(), context); // String Message = login
+			var id = context.getId();
+			var bbLogin = UTF8.encode(auth.getStringMessage());
+			context.setConnectionTypeAnonymous();
+			var bb = ByteBuffer.allocate(Byte.BYTES + Long.BYTES + Integer.BYTES + bbLogin.limit());
+			bb.put(ChatHackProtocol.OPCODE_ASK_AUTH_TO_DB_WITHOUT_PASSWORD).putLong(id).putInt(bbLogin.limit()).put(bbLogin).flip();
+			dbContext.queueMessage(bb);			
+		}
+		else {
+			context.queueMessage(new ResponseAuthentification("Login already in use").asByteBuffer());
+			context.silentlyInputClose();
+		}
+	}
+
+	public void sendToClientResponseOfDB(DB dbResponse) {
+		var clientContext = searchContextFromID(dbResponse.getId()).get();
+		var connectionType = clientContext.getConnectionTypes();
+		System.out.println("ConnnectionType " + connectionType);
+		ResponseAuthentification response;
+		if(connectionType == ConnectionTypes.CONNECTION_VALIDATED) {
+			if(dbResponse.getOpcode() == 1) {
+				response = new ResponseAuthentification("Connected");
+			}
+			else if (dbResponse.getOpcode() == 0) {
+				response = new ResponseAuthentification("Login or password incorrect !");
+				clientContext.silentlyInputClose();
+			}
+			else {
+				throw new IllegalStateException("The DB Server doesn't respect the protocol");
+			}
+		}
+		else if(connectionType == ConnectionTypes.CONNECTION_ANONYMOUS) {
+			if(dbResponse.getOpcode() == 1) { // Login dans la base de donnée
+				response = new ResponseAuthentification("You tried to connect with an already existing account");
+				clientContext.silentlyInputClose();
+			}
+			else if (dbResponse.getOpcode() == 0) {
+				response = new ResponseAuthentification("Connected (anonymous)");
+			}
+			else {
+				throw new IllegalStateException("The DB Server doesn't respect the protocol");
+			}
 		}
 		else {
 			throw new IllegalStateException("The DB Server doesn't respect the protocol");
 		}
-		
+
 		clientContext.queueMessage(response.asByteBuffer());
+
+	}
+
+	private Optional<ServerContext> searchContextFromID(long id) {
+		for(var entry : map.entrySet()){
+			var tmpId = map.get(entry.getKey()).getId();
+			if(tmpId == id) {
+				return Optional.of(map.get(entry.getKey()));
+			}
+		}
+		return Optional.empty();
+	}
+	
+	private Optional<String> getLoginFromId(long id){
+		for(var entry : map.entrySet()){
+			var tmpId = map.get(entry.getKey()).getId();
+			if(tmpId == id) {
+				return Optional.of(entry.getKey());
+			}
+		}
+		return Optional.empty();
+	}
+	
+	public void deleteElementFromId(long id){
+		var login = getLoginFromId(id);
+		if(login.isPresent()) {
+			map.remove(login.get());
+		}
 	}
 
 
@@ -237,9 +312,5 @@ public class ServerChatHack {
 		if (key.isReadable()) list.add("READ");
 		if (key.isWritable()) list.add("WRITE");
 		return String.join(" and ",list);
-	}
-	
-	private long getId() {
-		return id;
 	}
 }

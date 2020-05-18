@@ -4,4 +4,5 @@ public interface FrameVisitor {
 	void visit(PublicMessage publicMessage);
 	void visit(AuthentificationMessage authentificationMessage);
 	void visit(ResponseAuthentification responseAuthentification);
+	void visit(StringMessage stringMessage);
 }

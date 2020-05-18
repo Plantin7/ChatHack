@@ -28,8 +28,8 @@ public class ServerFrameVisitor implements FrameVisitor {
 		System.out.println("ServerFrameVisitor : TU NE DOIS PAS RENTRER ICI !");
 	}
 
-    /*public void visit(PrivateMessage privateMessage) {
-        //...
-        server.sendTo(privateMessage.dst,privateMessage.asByteBuffer());
-    }*/
+	@Override
+	public void visit(StringMessage stringMessage) {
+		server.sendAnonymousAuthentificationToDB(stringMessage, ctx);
+	}
 }

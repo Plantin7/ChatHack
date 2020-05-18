@@ -14,7 +14,7 @@ public class ClientFrameVisitor implements FrameVisitor{
 
     @Override
     public void visit(PublicMessage publicMessage) {
-    	clientChatHack.displayDialog(publicMessage);
+    	clientChatHack.displayFrameDialog(publicMessage);
     }
 
     @Override
@@ -24,6 +24,11 @@ public class ClientFrameVisitor implements FrameVisitor{
 
 	@Override
 	public void visit(ResponseAuthentification responseAuthentification) {
-		clientChatHack.displayAuthentification(responseAuthentification);
+		clientChatHack.displayFrameDialog(responseAuthentification);
+	}
+
+	@Override
+	public void visit(StringMessage stringMessage) {
+		System.out.println("ServerFrameVisitor : TU NE DOIS PAS RENTRER ICI !");
 	}
 }

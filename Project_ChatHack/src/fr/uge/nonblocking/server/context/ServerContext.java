@@ -16,6 +16,7 @@ import fr.uge.nonblocking.readers.complexReader.FrameReader;
 import fr.uge.nonblocking.server.ServerChatHack;
 
 public class ServerContext {
+	public enum ConnectionTypes {CONNECTION_VALIDATED, CONNECTION_ANONYMOUS, CONNECTION_NONE}
 	static private int BUFFER_SIZE = 10_000;
 	static private Logger logger = Logger.getLogger(ServerContext.class.getName());
 
@@ -26,8 +27,10 @@ public class ServerContext {
 	final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
 	final private Queue<ByteBuffer> queue = new LinkedList<>();
 	final private FrameReader frameReader = new FrameReader();
+	final private ServerChatHack server;
 	private final ServerFrameVisitor frameVisitor;
 	private boolean closed = false;
+	private ConnectionTypes connectionType = ConnectionTypes.CONNECTION_NONE;
 
 
 	public ServerContext(ServerChatHack server, SelectionKey key, long id){
@@ -35,6 +38,7 @@ public class ServerContext {
 		this.sc = (SocketChannel) key.channel();
 		this.frameVisitor =  new ServerFrameVisitor(this, server);
 		this.id = id;
+		this.server = server;
 	}
 
 	/**
@@ -122,9 +126,18 @@ public class ServerContext {
 		key.interestOps(interestOps);
 	}
 
-	private void silentlyClose() {
+	public void silentlyClose() {
 		try {
+			server.deleteElementFromId(id);
 			sc.close();
+		} catch (IOException e) {
+			// ignore exception
+		}
+	}
+	
+	public void silentlyInputClose() {
+		try {
+			sc.shutdownInput();
 		} catch (IOException e) {
 			// ignore exception
 		}
@@ -173,6 +186,18 @@ public class ServerContext {
 	
 	public long getId() {
 		return id;
+	}
+	
+	public void setConnectionTypeValidated() {
+		this.connectionType = ConnectionTypes.CONNECTION_VALIDATED;
+	}
+	
+	public void setConnectionTypeAnonymous(){
+		this.connectionType = ConnectionTypes.CONNECTION_ANONYMOUS;
+	}
+	
+	public ConnectionTypes getConnectionTypes() {
+		return connectionType;
 	}
 
 }

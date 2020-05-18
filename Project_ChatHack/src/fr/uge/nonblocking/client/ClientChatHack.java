@@ -9,12 +9,16 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Logger;
 
 import fr.uge.nonblocking.client.context.ClientContext;
 import fr.uge.nonblocking.frame.AuthentificationMessage;
+import fr.uge.nonblocking.frame.Frame;
 import fr.uge.nonblocking.frame.PublicMessage;
 import fr.uge.nonblocking.frame.ResponseAuthentification;
 import fr.uge.nonblocking.server.context.ServerContext;
@@ -29,8 +33,8 @@ public class ClientChatHack {
 
 	private final Thread console;
 	private final static Charset UTF8 = StandardCharsets.UTF_8;
-	private enum Command {AUTH, MESSAGE}
-	private final ArrayBlockingQueue<Command> commandQueue = new ArrayBlockingQueue<>(10);
+	private enum Command {SEND_PRIVATE_MESSAGE, SEND_PRIVATE_FILE, SEND_PUBLIC_MESSAGE}
+	private final ArrayBlockingQueue<Map<Command, String>> commandQueue = new ArrayBlockingQueue<>(10);
 	private ClientContext uniqueContext;
 
 	// params clientChatHack
@@ -38,10 +42,6 @@ public class ClientChatHack {
 	private final String login;
 	private final String pathRepository;
 	private final String password;
-
-	private enum StateConnection {CONNECTED, DISCONNECTED};
-	private enum error {INCORRECT_LOGIN, LOGIN_IN_USE, LOGIN_ALREADY_INTO_DB}
-	private StateConnection stateConnection;
 
 	public ClientChatHack(InetSocketAddress serverAddress, String pathRepository, String login, String password) throws IOException {
 		this.serverAddress = serverAddress;
@@ -57,15 +57,23 @@ public class ClientChatHack {
 		try (var scan = new Scanner(System.in)) {
 			while (scan.hasNextLine()) {
 				var line = scan.nextLine();
-				switch (line) {
-				case "AUTH": 
-					sendCommand(Command.AUTH);
-					break;
-				case "MESSAGE" : 
-					sendCommand(Command.MESSAGE);
-					break;
-				default:
-					System.out.println("Commande Invalide !");
+				if(!line.isEmpty()) {
+					var caractere = line.charAt(0);
+					switch (caractere) {
+					case '@': 
+						System.out.println("TODO Implement private message");
+						var privateMessage = Collections.singletonMap(Command.SEND_PRIVATE_MESSAGE, line.substring(1));
+						sendCommand(privateMessage);
+						break;
+					case '/' : 
+						System.out.println("TODO Implement private file message");
+						var privateFile = Collections.singletonMap(Command.SEND_PRIVATE_FILE, line.substring(1));
+						sendCommand(privateFile);
+						break;
+					default:
+						var publicMessage = Collections.singletonMap(Command.SEND_PUBLIC_MESSAGE, line);
+						sendCommand(publicMessage);
+					}
 				}
 			}
 		} catch (InterruptedException e) {
@@ -81,7 +89,7 @@ public class ClientChatHack {
 	 * @param
 	 * @throws InterruptedException
 	 */
-	private void sendCommand(Command cmd) throws InterruptedException {
+	private void sendCommand(Map<Command, String> cmd) throws InterruptedException {
 		synchronized (commandQueue) {
 			commandQueue.put(cmd);
 			selector.wakeup();
@@ -95,32 +103,34 @@ public class ClientChatHack {
 	private void processCommands() {
 		while(true) {
 			synchronized (commandQueue) {
-				var cmd = commandQueue.poll();
-				if(cmd == null) { return; }
+				var cmdMap = commandQueue.poll();
+				if(cmdMap == null) { return;}
+				var cmd = cmdMap.keySet().iterator().next();
+				var line = cmdMap.get(cmd);
 				switch (cmd) {
-				case AUTH: 
-					uniqueContext.queueMessage(new AuthentificationMessage(login, password).asByteBuffer());
+				case SEND_PRIVATE_MESSAGE: 
 					break;
-				case MESSAGE : 
-					uniqueContext.queueMessage(new PublicMessage(login, "Bonjour toi !").asByteBuffer());
+				case SEND_PUBLIC_MESSAGE : 
+					uniqueContext.queueMessage(new PublicMessage(login, line).asByteBuffer());
 					break;
 				}
 			}
 		}
 	}
-	
+
 	public void launch() throws IOException {
-		sc.configureBlocking(false);
+		/*sc.configureBlocking(false);
 		var key = sc.register(selector, SelectionKey.OP_CONNECT);
 		uniqueContext = new ClientContext(this, key);
 		key.attach(uniqueContext);
-		sc.connect(serverAddress);
+		sc.connect(serverAddress);*/
 		
-		// CLEINT 
-		// Pour eviter la negotitation !
-		// write
-		// readfully
-		// non bloquant 
+		sc.connect(serverAddress);
+		sc.configureBlocking(false);
+		var key = sc.register(selector, SelectionKey.OP_READ);
+		uniqueContext = new ClientContext(this, key);
+		key.attach(uniqueContext);
+		uniqueContext.queueMessage(new AuthentificationMessage(login, password).asByteBuffer());
 
 		console.setDaemon(true);
 		console.start();
@@ -152,24 +162,42 @@ public class ClientChatHack {
 		}
 	}
 	
-	public void displayDialog(PublicMessage publicMessage) {
-		System.out.println(publicMessage);
+	/**
+	 * Fill the workspace of the Bytebuffer with bytes read from sc.
+	 *
+	 * @param sc
+	 * @param bb
+	 * @return false if read returned -1 at some point and true otherwise
+	 * @throws IOException
+	 */
+	static boolean readFully(SocketChannel sc, ByteBuffer bb) throws IOException {
+		while(bb.hasRemaining()) {
+			if(sc.read(bb) == -1) {
+				return false;
+			}
+		}
+		return true;
 	}
-
-	public void displayAuthentification(ResponseAuthentification responseAuthentification) {
-		System.out.println(responseAuthentification);
-	}
-
 	
+	public void displayFrameDialog(Frame frame) {
+		System.out.println(frame);
+	}
+
 	public static void main(String[] args) throws NumberFormatException, IOException {
-		if (args.length != 4) {
+		if (args.length == 4) {
+			new ClientChatHack(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[2], args[3], "").launch();
+		}
+		else if(args.length == 5) {
+			new ClientChatHack(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[2], args[3], args[4]).launch();
+		}
+		else {
 			usage();
 			return;
 		}
-		new ClientChatHack(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[2], args[3], "work").launch();
+
 	}
 
 	private static void usage() {
-		System.out.println("Usage : ClientChatHack hostname port path_file login password(optional)");
+		System.out.println("Usage : ClientChatHack - hostname - port - path_file - login - (password)");
 	}
 }

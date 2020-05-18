@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 
 import fr.uge.nonblocking.frame.Frame;
 import fr.uge.nonblocking.readers.Reader;
+import fr.uge.nonblocking.readers.basicReader.StringReader;
 import fr.uge.protocol.ChatHackProtocol;
 
 public class FrameReader implements Reader<Frame> {
@@ -15,6 +16,7 @@ public class FrameReader implements Reader<Frame> {
 	private PublicMessageReader publicMessageReader = new PublicMessageReader();
 	private AuthentificationReader authentificationReader = new AuthentificationReader();
 	private ResponseAuthentificationReader responseAuthentificationReader = new ResponseAuthentificationReader();
+	private StringMessageReader stringMessageReader = new StringMessageReader();
 	
 	private Reader<? extends Frame> currentFrameReader;
 	private Frame frame;
@@ -46,6 +48,13 @@ public class FrameReader implements Reader<Frame> {
 			case ChatHackProtocol.OPCODE_RESPONSE_AUTH_WITH_PASSWORD : {
 				currentFrameReader = responseAuthentificationReader;
 				break;
+			}
+			case ChatHackProtocol.OPCODE_ASK_AUTH_WITHOUT_PASSWORD : {
+				currentFrameReader = stringMessageReader;
+				break;
+			}
+			case ChatHackProtocol.OPCODE_RESPONSE_AUTH_WITHOUT_PASSWORD : {
+				currentFrameReader = responseAuthentificationReader;
 			}
 			case ChatHackProtocol.OPCODE_PUBLIC_MESSAGE: {
 				currentFrameReader = publicMessageReader;

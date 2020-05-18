@@ -48,7 +48,6 @@ public class DBContext {
             switch (status) {
                 case DONE:
                     var responseOfDB = dbReader.get();
-                    System.out.println("DBContext DONE : "+ responseOfDB);
                     server.sendToClientResponseOfDB(responseOfDB);
                     dbReader.reset();
                     break;
