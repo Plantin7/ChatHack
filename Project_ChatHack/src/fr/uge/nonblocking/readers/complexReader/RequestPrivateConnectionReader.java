@@ -1,38 +1,51 @@
 package fr.uge.nonblocking.readers.complexReader;
 
-import java.nio.ByteBuffer;
-
-import fr.uge.nonblocking.frame.StringMessage;
+import fr.uge.nonblocking.frame.RequestPrivateConnection;
 import fr.uge.nonblocking.readers.Reader;
 import fr.uge.nonblocking.readers.basicReader.StringReader;
 
-public class StringMessageReader implements Reader<StringMessage>{
-    private enum State {DONE, WAITING_STRING, ERROR}
+import java.nio.ByteBuffer;
 
-    private State state = State.WAITING_STRING;
-    private String string;
+public class RequestPrivateConnectionReader implements Reader<RequestPrivateConnection> {
+
+    private enum State {DONE, WAITING_LOGIN, WAITING_MESSAGE, ERROR}
+
+    private State state = State.WAITING_LOGIN;
+    private String login;
+    private String message;
     private final StringReader stringReader = new StringReader();
 
-	@Override
-	public ProcessStatus process(ByteBuffer bb) {
+    @Override
+    public ProcessStatus process(ByteBuffer bb) {
         if (state == State.DONE || state == State.ERROR) {
             throw new IllegalStateException();
         }
         switch (state) {
-            case WAITING_STRING: {
+            case WAITING_LOGIN: {
+                var stateLogin = getStringPart(bb);
+                if (stateLogin != ProcessStatus.DONE) {
+                    return stateLogin;
+                }
+                login = stringReader.get();
+                state = State.WAITING_MESSAGE;
+                stringReader.reset();
+            }
+            case WAITING_MESSAGE: {
                 var statePassword = getStringPart(bb);
                 if (statePassword != ProcessStatus.DONE) {
                     return statePassword;
                 }
-                string = stringReader.get();
+                message = stringReader.get();
                 state = State.DONE;
+                stringReader.reset();
                 return ProcessStatus.DONE;
             }
             default:
                 throw new IllegalArgumentException("unexpected value: " + state);
         }
-	}
-	
+    }
+
+
     private ProcessStatus getStringPart(ByteBuffer bb) {
         Reader.ProcessStatus status = stringReader.process(bb);
         switch (status) {
@@ -46,19 +59,20 @@ public class StringMessageReader implements Reader<StringMessage>{
         throw new AssertionError();
     }
 
-	@Override
-	public StringMessage get() {
+
+    @Override
+    public RequestPrivateConnection get() {
         if (state != State.DONE) {
             throw new IllegalStateException();
         }
-        return new StringMessage(string);
-	}
+        return new RequestPrivateConnection(login, message);
+    }
 
-	@Override
-	public void reset() {
-        state = State.WAITING_STRING;
-        stringReader.reset();	
-        string = null;
-	}
-
+    @Override
+    public void reset() {
+        state = State.WAITING_LOGIN;
+        stringReader.reset();
+        login = null;
+        message= null;
+    }
 }

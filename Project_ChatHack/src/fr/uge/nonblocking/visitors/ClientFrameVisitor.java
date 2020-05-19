@@ -32,4 +32,15 @@ public class ClientFrameVisitor implements FrameVisitor {
 	public void visit(StringMessage stringMessage) {
 		System.out.println("ServerFrameVisitor : TU NE DOIS PAS RENTRER ICI !");
 	}
+
+	@Override
+	public void visit(RequestPrivateConnection requestPrivateConnection) {
+		clientChatHack.displayFrameDialog(requestPrivateConnection);
+	}
+
+	@Override
+	public void visit(ErrorPrivateConnection errorPrivateConnection) {
+		clientChatHack.errorPendingPrivateConnectionRequest(errorPrivateConnection);
+	}
+	
 }

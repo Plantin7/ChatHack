@@ -2,14 +2,14 @@ package fr.uge.nonblocking.readers.complexReader;
 
 import java.nio.ByteBuffer;
 
-import fr.uge.nonblocking.frame.StringMessage;
+import fr.uge.nonblocking.frame.ErrorPrivateConnection;
 import fr.uge.nonblocking.readers.Reader;
 import fr.uge.nonblocking.readers.basicReader.StringReader;
 
-public class StringMessageReader implements Reader<StringMessage>{
-    private enum State {DONE, WAITING_STRING, ERROR}
+public class ErrorPrivateConnectionReader implements Reader<ErrorPrivateConnection>{
+    private enum State {DONE, WAITING_ERROR, ERROR}
 
-    private State state = State.WAITING_STRING;
+    private State state = State.WAITING_ERROR;
     private String string;
     private final StringReader stringReader = new StringReader();
 
@@ -19,7 +19,7 @@ public class StringMessageReader implements Reader<StringMessage>{
             throw new IllegalStateException();
         }
         switch (state) {
-            case WAITING_STRING: {
+            case WAITING_ERROR: {
                 var statePassword = getStringPart(bb);
                 if (statePassword != ProcessStatus.DONE) {
                     return statePassword;
@@ -47,18 +47,17 @@ public class StringMessageReader implements Reader<StringMessage>{
     }
 
 	@Override
-	public StringMessage get() {
+	public ErrorPrivateConnection get() {
         if (state != State.DONE) {
             throw new IllegalStateException();
         }
-        return new StringMessage(string);
+        return new ErrorPrivateConnection(string);
 	}
 
 	@Override
 	public void reset() {
-        state = State.WAITING_STRING;
+        state = State.WAITING_ERROR;
         stringReader.reset();	
         string = null;
 	}
-
 }

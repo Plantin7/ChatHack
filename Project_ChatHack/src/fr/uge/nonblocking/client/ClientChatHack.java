@@ -9,6 +9,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,8 +19,10 @@ import java.util.logging.Logger;
 
 import fr.uge.nonblocking.client.context.ClientContext;
 import fr.uge.nonblocking.frame.AuthentificationMessage;
+import fr.uge.nonblocking.frame.ErrorPrivateConnection;
 import fr.uge.nonblocking.frame.Frame;
 import fr.uge.nonblocking.frame.PublicMessage;
+import fr.uge.nonblocking.frame.RequestPrivateConnection;
 import fr.uge.nonblocking.frame.ResponseAuthentification;
 import fr.uge.nonblocking.server.context.ServerContext;
 
@@ -36,6 +39,7 @@ public class ClientChatHack {
 	private enum Command {SEND_PRIVATE_MESSAGE, SEND_PRIVATE_FILE, SEND_PUBLIC_MESSAGE}
 	private final ArrayBlockingQueue<Map<Command, String>> commandQueue = new ArrayBlockingQueue<>(10);
 	private ClientContext uniqueContext;
+	private final HashMap<String, String> pendingRequest = new HashMap<>();
 
 	// params clientChatHack
 	private final InetSocketAddress serverAddress;
@@ -61,14 +65,13 @@ public class ClientChatHack {
 					var caractere = line.charAt(0);
 					switch (caractere) {
 					case '@': 
-						System.out.println("TODO Implement private message");
 						var privateMessage = Collections.singletonMap(Command.SEND_PRIVATE_MESSAGE, line.substring(1));
 						sendCommand(privateMessage);
 						break;
 					case '/' : 
 						System.out.println("TODO Implement private file message");
-						var privateFile = Collections.singletonMap(Command.SEND_PRIVATE_FILE, line.substring(1));
-						sendCommand(privateFile);
+						//var privateFile = Collections.singletonMap(Command.SEND_PRIVATE_FILE, line.substring(1));
+						//sendCommand(privateFile);
 						break;
 					default:
 						var publicMessage = Collections.singletonMap(Command.SEND_PUBLIC_MESSAGE, line);
@@ -108,8 +111,19 @@ public class ClientChatHack {
 				var cmd = cmdMap.keySet().iterator().next();
 				var line = cmdMap.get(cmd);
 				switch (cmd) {
-				case SEND_PRIVATE_MESSAGE: 
+				case SEND_PRIVATE_MESSAGE: {
+					var privateRequest = line.split(" ", 2);
+					var login = privateRequest[0];
+					if(!pendingRequest.containsKey(login)) {
+						var message = privateRequest[1];
+						pendingRequest.put(login, message);
+						uniqueContext.queueMessage(new RequestPrivateConnection(login, message).asByteBuffer());
+					}
+					else {
+						System.out.println("Le client " + "\"" + login + "\"" + " n'a pas encore répondu à votre demande !");
+					}
 					break;
+				}
 				case SEND_PUBLIC_MESSAGE : 
 					uniqueContext.queueMessage(new PublicMessage(login, line).asByteBuffer());
 					break;
@@ -181,6 +195,11 @@ public class ClientChatHack {
 	
 	public void displayFrameDialog(Frame frame) {
 		System.out.println(frame);
+	}
+	
+	public void errorPendingPrivateConnectionRequest(ErrorPrivateConnection errorPrivateConnection) {
+		displayFrameDialog(errorPrivateConnection);
+		pendingRequest.remove(errorPrivateConnection.getLogin());
 	}
 
 	public static void main(String[] args) throws NumberFormatException, IOException {

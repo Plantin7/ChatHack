@@ -16,6 +16,8 @@ import java.util.logging.Logger;
 
 import fr.uge.nonblocking.frame.AuthentificationMessage;
 import fr.uge.nonblocking.frame.DB;
+import fr.uge.nonblocking.frame.ErrorPrivateConnection;
+import fr.uge.nonblocking.frame.RequestPrivateConnection;
 import fr.uge.nonblocking.frame.ResponseAuthentification;
 import fr.uge.nonblocking.frame.StringMessage;
 import fr.uge.nonblocking.server.context.DBContext;
@@ -209,6 +211,19 @@ public class ServerChatHack {
 
 		clientContext.queueMessage(response.asByteBuffer());
 
+	}
+	// BAD NAME BURK CEST PAS BEAU
+	public void sendPrivateConnectionRequestToClient(RequestPrivateConnection requestPrivateConnection, ServerContext ctx) {
+		var contextDest = map.get(requestPrivateConnection.getLogin());
+		var loginDest = requestPrivateConnection.getLogin();
+		if(contextDest != null) {
+			var expeditor = getLoginFromId(ctx.getId()).get();
+			var response = "The " + "\"" + expeditor + "\"" + " client wants to send you a message. Do you accept ? \n@accept " + expeditor + "\n@refuse " + expeditor;
+			contextDest.queueMessage(new ResponseAuthentification(response).asByteBuffer());
+		}
+		else {
+			ctx.queueMessage(new ErrorPrivateConnection(loginDest).asByteBuffer());
+		}
 	}
 
 	private Optional<ServerContext> searchContextFromID(long id) {

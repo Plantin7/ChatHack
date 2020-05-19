@@ -33,4 +33,14 @@ public class ServerFrameVisitor implements FrameVisitor {
 	public void visit(StringMessage stringMessage) {
 		server.sendAnonymousAuthentificationToDB(stringMessage, ctx);
 	}
+
+	@Override
+	public void visit(RequestPrivateConnection requestPrivateConnection) {
+		server.sendPrivateConnectionRequestToClient(requestPrivateConnection, ctx);
+	}
+
+	@Override
+	public void visit(ErrorPrivateConnection errorPrivateConnection) {
+		
+	}
 }

@@ -8,4 +8,5 @@ public interface FrameVisitor {
 	void visit(ResponseAuthentification responseAuthentification);
 	void visit(StringMessage stringMessage);
 	void visit(RequestPrivateConnection requestPrivateConnection);
+	void visit(ErrorPrivateConnection errorPrivateConnection);
 }

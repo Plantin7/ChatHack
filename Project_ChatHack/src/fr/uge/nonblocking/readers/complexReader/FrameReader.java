@@ -3,6 +3,7 @@ package fr.uge.nonblocking.readers.complexReader;
 import java.nio.ByteBuffer;
 
 import fr.uge.nonblocking.frame.Frame;
+import fr.uge.nonblocking.frame.RequestPrivateConnection;
 import fr.uge.nonblocking.readers.Reader;
 import fr.uge.nonblocking.readers.basicReader.StringReader;
 import fr.uge.protocol.ChatHackProtocol;
@@ -16,6 +17,8 @@ public class FrameReader implements Reader<Frame> {
 	private PublicMessageReader publicMessageReader = new PublicMessageReader();
 	private AuthentificationReader authentificationReader = new AuthentificationReader();
 	private ResponseAuthentificationReader responseAuthentificationReader = new ResponseAuthentificationReader();
+	private RequestPrivateConnectionReader requestPrivateConnectionReader = new RequestPrivateConnectionReader();
+	private ErrorPrivateConnectionReader errorReader = new ErrorPrivateConnectionReader();
 	private StringMessageReader stringMessageReader = new StringMessageReader();
 	
 	private Reader<? extends Frame> currentFrameReader;
@@ -55,9 +58,18 @@ public class FrameReader implements Reader<Frame> {
 			}
 			case ChatHackProtocol.OPCODE_RESPONSE_AUTH_WITHOUT_PASSWORD : {
 				currentFrameReader = responseAuthentificationReader;
+				break;
 			}
 			case ChatHackProtocol.OPCODE_PUBLIC_MESSAGE: {
 				currentFrameReader = publicMessageReader;
+				break;
+			}
+			case ChatHackProtocol.OPCODE_ASK_PRIVATE_CONNECTION: {
+				currentFrameReader = requestPrivateConnectionReader;
+				break;
+			}
+			case ChatHackProtocol.OPCODE_ERROR_PRIVATE_CONNECTION: {
+				currentFrameReader = errorReader;
 				break;
 			}
 			default:
@@ -107,7 +119,11 @@ public class FrameReader implements Reader<Frame> {
 	public void reset() {
 		state = State.WAITING_OP;
 		publicMessageReader.reset();
+		authentificationReader.reset();
+		responseAuthentificationReader.reset();
+		requestPrivateConnectionReader.reset();
 		currentFrameReader.reset();
+		stringMessageReader.reset();
 		frame = null;
 	}
 

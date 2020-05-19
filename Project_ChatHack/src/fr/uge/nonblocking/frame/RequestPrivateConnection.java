@@ -10,28 +10,36 @@ import java.nio.charset.StandardCharsets;
 public class RequestPrivateConnection implements Frame {
 
     private final static Charset UTF8 = StandardCharsets.UTF_8;
-    private final String nameRecipient;
+    private final String login;
+    private final String message;
 
-    public RequestPrivateConnection(String nameRecipient) {
-        this.nameRecipient = nameRecipient;
+    public RequestPrivateConnection(String login, String message) {
+    	this.login = login;
+        this.message = message;
     }
 
     @Override
     public ByteBuffer asByteBuffer() {
-        var bbRecipient = UTF8.encode(nameRecipient);
-        ByteBuffer bb = ByteBuffer.allocate(Byte.BYTES + Integer.BYTES + bbRecipient.limit());
-        bb.put(ChatHackProtocol.OPCODE_ASK_PRIVATE_CONNECTION).putInt(bbRecipient.limit()).put(bbRecipient);
+    	var bbLogin = UTF8.encode(login);
+    	var bbMessage = UTF8.encode(message);
+        var bb = ByteBuffer.allocate(Byte.BYTES + 2 * Integer.BYTES + bbLogin.limit() + bbMessage.limit());
+        bb.put(ChatHackProtocol.OPCODE_ASK_PRIVATE_CONNECTION).putInt(bbLogin.limit()).put(bbLogin).putInt(bbMessage.limit()).put(bbMessage);
         return bb.flip();
     }
 
-    public String getNameRecipient() {
-        return nameRecipient;
+    public String getLogin() {
+        return login;
+    }
+    
+    public String getMessage() {
+    	return message;
     }
 
     @Override
     public String toString() {
         return "RequestPrivateConnection{" +
-                "nameRecipient='" + nameRecipient + '\'' +
+                "login='" + login + '\'' +
+                "message='" + message + '\'' +
                 '}';
     }
 
