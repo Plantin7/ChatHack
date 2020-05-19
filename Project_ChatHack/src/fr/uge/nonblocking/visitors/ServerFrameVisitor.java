@@ -41,6 +41,16 @@ public class ServerFrameVisitor implements FrameVisitor {
 
 	@Override
 	public void visit(ErrorPrivateConnection errorPrivateConnection) {
-		
+		System.out.println("ServerFrameVisitor : TU NE DOIS PAS RENTRER ICI !");
+	}
+
+	@Override
+	public void visit(RefusePrivateConnection refusePrivateConnection) {
+		server.sendRefuseRequestConnectionToClient(refusePrivateConnection, ctx);
+	}
+
+	@Override
+	public void visit(AcceptPrivateConnection acceptPrivateConnection) {
+		server.sendAcceptRequestConnectionToClient(acceptPrivateConnection, ctx);
 	}
 }

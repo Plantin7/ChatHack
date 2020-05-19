@@ -17,6 +17,10 @@ public class RequestPrivateConnection implements Frame {
     	this.login = login;
         this.message = message;
     }
+    
+    public RequestPrivateConnection(String login) {
+    	this(login, "");
+    }
 
     @Override
     public ByteBuffer asByteBuffer() {
@@ -37,10 +41,10 @@ public class RequestPrivateConnection implements Frame {
 
     @Override
     public String toString() {
-        return "RequestPrivateConnection{" +
-                "login='" + login + '\'' +
-                "message='" + message + '\'' +
-                '}';
+        return "The " + "\"" + 
+        		login + "\"" + 
+        		" client wants to send you a message. Do you accept ? \n/accept " + 
+        		login + "\n/refuse " + login;
     }
 
     @Override

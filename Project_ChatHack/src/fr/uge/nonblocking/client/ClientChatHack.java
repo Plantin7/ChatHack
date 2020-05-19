@@ -4,29 +4,36 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import fr.uge.nonblocking.client.context.ClientContext;
+import fr.uge.nonblocking.client.context.ClientPrivateContext;
+import fr.uge.nonblocking.frame.AcceptPrivateConnection;
 import fr.uge.nonblocking.frame.AuthentificationMessage;
 import fr.uge.nonblocking.frame.ErrorPrivateConnection;
 import fr.uge.nonblocking.frame.Frame;
 import fr.uge.nonblocking.frame.PublicMessage;
+import fr.uge.nonblocking.frame.RefusePrivateConnection;
 import fr.uge.nonblocking.frame.RequestPrivateConnection;
-import fr.uge.nonblocking.frame.ResponseAuthentification;
+import fr.uge.nonblocking.server.context.DBContext;
 import fr.uge.nonblocking.server.context.ServerContext;
 
 public class ClientChatHack {
+
+	// ---------------- SERVER ----------------------
+	private final ServerSocketChannel serverSocketChannel;
 
 	static private Logger logger = Logger.getLogger(ClientChatHack.class.getName());
 
@@ -35,11 +42,15 @@ public class ClientChatHack {
 	private final Selector selector;
 
 	private final Thread console;
-	private final static Charset UTF8 = StandardCharsets.UTF_8;
-	private enum Command {SEND_PRIVATE_MESSAGE, SEND_PRIVATE_FILE, SEND_PUBLIC_MESSAGE}
+	private enum Command {SEND_PRIVATE_MESSAGE, 
+		SEND_PRIVATE_FILE, 
+		SEND_PUBLIC_MESSAGE, 
+		SEND_ACCEPT_PRIVATE_CONNECTION, 
+		SEND_REFUSE_PRIVATE_CONNECTION}
 	private final ArrayBlockingQueue<Map<Command, String>> commandQueue = new ArrayBlockingQueue<>(10);
 	private ClientContext uniqueContext;
-	private final HashMap<String, String> pendingRequest = new HashMap<>();
+	private final HashMap<String, String> myPendingRequest = new HashMap<>();
+	private final ArrayList<String> clientAwaitingResponse = new ArrayList<>();
 
 	// params clientChatHack
 	private final InetSocketAddress serverAddress;
@@ -55,6 +66,7 @@ public class ClientChatHack {
 		this.sc = SocketChannel.open();
 		this.selector = Selector.open();
 		this.console = new Thread(this::consoleRun);
+		this.serverSocketChannel = ServerSocketChannel.open();
 	}
 
 	private void consoleRun() {
@@ -65,14 +77,39 @@ public class ClientChatHack {
 					var caractere = line.charAt(0);
 					switch (caractere) {
 					case '@': 
-						var privateMessage = Collections.singletonMap(Command.SEND_PRIVATE_MESSAGE, line.substring(1));
-						sendCommand(privateMessage);
+						var privateRequest = line.substring(1).split(" ", 2);
+						var lineLogin = privateRequest[0];
+						if(!login.equals(lineLogin)) {
+							var privateMessage = Collections.singletonMap(Command.SEND_PRIVATE_MESSAGE, line.substring(1));
+							sendCommand(privateMessage);
+						}
+						else {
+							System.out.println("Vous essayé de vous parler à vous meme, bizzare");
+						}
+
 						break;
-					case '/' : 
-						System.out.println("TODO Implement private file message");
-						//var privateFile = Collections.singletonMap(Command.SEND_PRIVATE_FILE, line.substring(1));
-						//sendCommand(privateFile);
+					case '/' :
+						var accept = line.startsWith("/accept");
+						var refuse = line.startsWith("/refuse");
+						var login = line.split(" ", 2)[1]; // bug si pas de message !
+						if(accept && checkValidRequest(login)) {
+							var mapAccept = Collections.singletonMap(Command.SEND_ACCEPT_PRIVATE_CONNECTION, login);
+							sendCommand(mapAccept);
+						}
+						else if(refuse && checkValidRequest(login)) {
+							var mapRefuse = Collections.singletonMap(Command.SEND_REFUSE_PRIVATE_CONNECTION, login);
+							sendCommand(mapRefuse);
+						}
+						else {
+							//System.out.println("TODO Implement private file");
+						}
 						break;
+					case '!':{
+						// DebugMode
+						System.out.println("Mes demandes en attente : " + myPendingRequest);
+						System.out.println("Les clients en attente d'une réponse : " + clientAwaitingResponse);
+						break;
+					} 
 					default:
 						var publicMessage = Collections.singletonMap(Command.SEND_PUBLIC_MESSAGE, line);
 						sendCommand(publicMessage);
@@ -85,6 +122,15 @@ public class ClientChatHack {
 			logger.info("Console thread stopping");
 		}
 	}
+
+	private boolean checkValidRequest(String login) {
+		if(clientAwaitingResponse.contains(login)) {
+			return true;
+		}
+		System.out.println("Vous n'avez pas de demande en cours pour le client : " + login);
+		return false;
+	}
+
 
 	/**
 	 * Send a command to the selector via commandQueue and wake it up
@@ -110,18 +156,31 @@ public class ClientChatHack {
 				if(cmdMap == null) { return;}
 				var cmd = cmdMap.keySet().iterator().next();
 				var line = cmdMap.get(cmd);
+
 				switch (cmd) {
 				case SEND_PRIVATE_MESSAGE: {
 					var privateRequest = line.split(" ", 2);
 					var login = privateRequest[0];
-					if(!pendingRequest.containsKey(login)) {
+					// TODO A changer !
+					if(!myPendingRequest.containsKey(login)) {
 						var message = privateRequest[1];
-						pendingRequest.put(login, message);
+						myPendingRequest.put(login, message);
 						uniqueContext.queueMessage(new RequestPrivateConnection(login, message).asByteBuffer());
 					}
 					else {
 						System.out.println("Le client " + "\"" + login + "\"" + " n'a pas encore répondu à votre demande !");
 					}
+					break;
+				}
+				case SEND_ACCEPT_PRIVATE_CONNECTION : {
+					uniqueContext.queueMessage(new AcceptPrivateConnection(line).asByteBuffer());
+					clientAwaitingResponse.remove(line);
+					//TODO
+					break;
+				}
+				case SEND_REFUSE_PRIVATE_CONNECTION : {
+					uniqueContext.queueMessage(new RefusePrivateConnection(line).asByteBuffer());
+					clientAwaitingResponse.remove(line);
 					break;
 				}
 				case SEND_PUBLIC_MESSAGE : 
@@ -138,13 +197,19 @@ public class ClientChatHack {
 		uniqueContext = new ClientContext(this, key);
 		key.attach(uniqueContext);
 		sc.connect(serverAddress);*/
-		
+
 		sc.connect(serverAddress);
 		sc.configureBlocking(false);
 		var key = sc.register(selector, SelectionKey.OP_READ);
 		uniqueContext = new ClientContext(this, key);
 		key.attach(uniqueContext);
 		uniqueContext.queueMessage(new AuthentificationMessage(login, password).asByteBuffer());
+
+		// ------------ Server ------------------------- //
+		serverSocketChannel.bind(new InetSocketAddress(0));
+		serverSocketChannel.configureBlocking(false);
+		serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+		// ------------ Server ------------------------- //
 
 		console.setDaemon(true);
 		console.start();
@@ -158,24 +223,69 @@ public class ClientChatHack {
 			}
 		}
 	}
+	
 
 	private void treatKey(SelectionKey key) {
 		try {
-			if (key.isValid() && key.isConnectable()) {
-				uniqueContext.doConnect();
+			if (key.isValid() && key.isAcceptable()) {
+				doAccept(key);
 			}
-			if (key.isValid() && key.isWritable()) {
-				uniqueContext.doWrite();
-			}
-			if (key.isValid() && key.isReadable()) {
-				uniqueContext.doRead();
-			}
-		} catch (IOException ioe) {
+		} catch(IOException ioe) {
 			// lambda call in select requires to tunnel IOException
 			throw new UncheckedIOException(ioe);
 		}
+		try {
+			if (key.isValid() && key.isConnectable()) {
+				if(key.attachment() instanceof ClientContext) {
+					uniqueContext.doConnect();
+				}
+				if(key.attachment() instanceof ClientPrivateContext) {
+					((ClientPrivateContext) key.attachment()).doConnect();
+				}
+			}
+			if (key.isValid() && key.isWritable()) {
+				if(key.attachment() instanceof ClientContext) {
+					uniqueContext.doWrite();
+				}
+				if(key.attachment() instanceof ClientPrivateContext) {
+					((ClientPrivateContext) key.attachment()).doWrite();
+				}
+			}
+			if (key.isValid() && key.isReadable()) {
+				if(key.attachment() instanceof ClientContext) {
+					uniqueContext.doRead();
+				}
+				if(key.attachment() instanceof ClientPrivateContext) {
+					((ClientPrivateContext) key.attachment()).doRead();
+				}
+			}
+		} catch (IOException e) {
+			logger.log(Level.INFO,"Connection closed with client due to IOException",e);
+			silentlyClose(key);
+		}
 	}
 	
+	private void doAccept(SelectionKey key) throws IOException {
+		var sc = serverSocketChannel.accept();
+		if(sc == null) {
+			return;
+		}
+		sc.configureBlocking(false);
+		var client = sc.register(selector, SelectionKey.OP_READ);
+		var context = new ClientPrivateContext(this, client);
+		client.attach(context);
+	}
+	
+	private void silentlyClose(SelectionKey key) {
+		Channel sc = (Channel) key.channel();
+		try {
+			sc.close();
+		} catch (IOException e) {
+			// ignore exception
+		}
+	}
+
+
 	/**
 	 * Fill the workspace of the Bytebuffer with bytes read from sc.
 	 *
@@ -192,14 +302,29 @@ public class ClientChatHack {
 		}
 		return true;
 	}
-	
+
 	public void displayFrameDialog(Frame frame) {
 		System.out.println(frame);
 	}
-	
+
 	public void errorPendingPrivateConnectionRequest(ErrorPrivateConnection errorPrivateConnection) {
 		displayFrameDialog(errorPrivateConnection);
-		pendingRequest.remove(errorPrivateConnection.getLogin());
+		myPendingRequest.remove(errorPrivateConnection.getLogin());
+	}
+
+	public void manageRequestPrivateConnection(RequestPrivateConnection requestPrivateConnection) {
+		displayFrameDialog(requestPrivateConnection);
+		clientAwaitingResponse.add(requestPrivateConnection.getLogin());
+	}
+
+	public void manageRefusePrivateConnection(RefusePrivateConnection refusePrivateConnection) {
+		displayFrameDialog(refusePrivateConnection);
+		myPendingRequest.remove(refusePrivateConnection.getLogin());
+	}
+
+	public void manageAcceptPrivateConnection(AcceptPrivateConnection acceptPrivateConnection) {
+		displayFrameDialog(acceptPrivateConnection);
+		myPendingRequest.remove(acceptPrivateConnection.getLogin());
 	}
 
 	public static void main(String[] args) throws NumberFormatException, IOException {

@@ -14,12 +14,15 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import fr.uge.nonblocking.frame.AcceptPrivateConnection;
 import fr.uge.nonblocking.frame.AuthentificationMessage;
 import fr.uge.nonblocking.frame.DB;
 import fr.uge.nonblocking.frame.ErrorPrivateConnection;
+import fr.uge.nonblocking.frame.RefusePrivateConnection;
 import fr.uge.nonblocking.frame.RequestPrivateConnection;
 import fr.uge.nonblocking.frame.ResponseAuthentification;
 import fr.uge.nonblocking.frame.StringMessage;
+import fr.uge.nonblocking.readers.complexReader.RefusePrivateConnectionReader;
 import fr.uge.nonblocking.server.context.DBContext;
 import fr.uge.nonblocking.server.context.ServerContext;
 import fr.uge.nonblocking.server.context.ServerContext.ConnectionTypes;
@@ -212,17 +215,40 @@ public class ServerChatHack {
 		clientContext.queueMessage(response.asByteBuffer());
 
 	}
-	// BAD NAME BURK CEST PAS BEAU
+	
 	public void sendPrivateConnectionRequestToClient(RequestPrivateConnection requestPrivateConnection, ServerContext ctx) {
-		var contextDest = map.get(requestPrivateConnection.getLogin());
 		var loginDest = requestPrivateConnection.getLogin();
+		var contextDest = map.get(loginDest);
 		if(contextDest != null) {
 			var expeditor = getLoginFromId(ctx.getId()).get();
-			var response = "The " + "\"" + expeditor + "\"" + " client wants to send you a message. Do you accept ? \n@accept " + expeditor + "\n@refuse " + expeditor;
-			contextDest.queueMessage(new ResponseAuthentification(response).asByteBuffer());
+			contextDest.queueMessage(new RequestPrivateConnection(expeditor).asByteBuffer());
 		}
 		else {
 			ctx.queueMessage(new ErrorPrivateConnection(loginDest).asByteBuffer());
+		}
+	}
+	
+	public void sendRefuseRequestConnectionToClient(RefusePrivateConnection refusePrivateConnection, ServerContext ctx) {
+		var loginDest = refusePrivateConnection.getLogin();
+		var contextDest = map.get(loginDest);
+		if(contextDest != null) {
+			var login = getLoginFromId(ctx.getId()).get();
+			contextDest.queueMessage(new RefusePrivateConnection(login).asByteBuffer());
+		}
+		else {
+			System.out.println("RefuseConnection : ON NE DOIT PAS RENTRER ICI" );
+		}
+	}
+	
+	public void sendAcceptRequestConnectionToClient(AcceptPrivateConnection acceptPrivateConnection, ServerContext ctx) {
+		var loginDest = acceptPrivateConnection.getLogin();
+		var contextDest = map.get(loginDest);
+		if(contextDest != null) {
+			var expeditor = getLoginFromId(ctx.getId()).get();
+			contextDest.queueMessage(new AcceptPrivateConnection(expeditor).asByteBuffer());
+		}
+		else {
+			System.out.println("RefuseConnection : ON NE DOIT PAS RENTRER ICI" );
 		}
 	}
 

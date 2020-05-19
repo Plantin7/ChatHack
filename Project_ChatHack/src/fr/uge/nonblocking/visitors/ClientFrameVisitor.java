@@ -35,12 +35,22 @@ public class ClientFrameVisitor implements FrameVisitor {
 
 	@Override
 	public void visit(RequestPrivateConnection requestPrivateConnection) {
-		clientChatHack.displayFrameDialog(requestPrivateConnection);
+		clientChatHack.manageRequestPrivateConnection(requestPrivateConnection);
 	}
 
 	@Override
 	public void visit(ErrorPrivateConnection errorPrivateConnection) {
 		clientChatHack.errorPendingPrivateConnectionRequest(errorPrivateConnection);
+	}
+
+	@Override
+	public void visit(RefusePrivateConnection refusePrivateConnection) {
+		clientChatHack.manageRefusePrivateConnection(refusePrivateConnection);
+	}
+
+	@Override
+	public void visit(AcceptPrivateConnection acceptPrivateConnection) {
+		clientChatHack.manageAcceptPrivateConnection(acceptPrivateConnection);
 	}
 	
 }
