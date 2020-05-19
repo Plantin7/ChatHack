@@ -23,4 +23,6 @@ public class ChatHackProtocol {
 	public final static byte OPCODE_ACCEPT_PRIVATE_CONNECTION = 17;
 	public final static byte OPCODE_REFUSE_PRIVATE_CONNECTION = 18;
 
+	public final static byte OPCODE_SEND_FILE_MESSAGE= 19;
+
 }
