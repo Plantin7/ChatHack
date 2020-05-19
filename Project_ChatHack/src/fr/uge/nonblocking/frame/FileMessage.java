@@ -33,9 +33,9 @@ public class FileMessage implements Frame {
                 Byte.BYTES + 3* Integer.BYTES + bbLogin.limit() +  bbNameFile.limit() + bbContent.limit()
                 + 2* Long.BYTES);
         bb.put(ChatHackProtocol.OPCODE_SEND_FILE_MESSAGE)
-                .putLong(keyPrivateConnection)
                 .putInt(bbLogin.limit())
                 .put(bbLogin)
+                .putLong(keyPrivateConnection)
                 .putInt(bbNameFile.limit())
                 .put(bbNameFile)
                 .putLong(nbBlocs)
