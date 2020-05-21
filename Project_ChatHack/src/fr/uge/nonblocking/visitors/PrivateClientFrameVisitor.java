@@ -5,6 +5,7 @@ import fr.uge.nonblocking.client.context.ClientPrivateContext;
 import fr.uge.nonblocking.frame.AcceptPrivateConnection;
 import fr.uge.nonblocking.frame.AuthentificationMessage;
 import fr.uge.nonblocking.frame.ErrorPrivateConnection;
+import fr.uge.nonblocking.frame.PrivateMessage;
 import fr.uge.nonblocking.frame.PublicMessage;
 import fr.uge.nonblocking.frame.RefusePrivateConnection;
 import fr.uge.nonblocking.frame.RequestPrivateConnection;
@@ -58,6 +59,11 @@ public class PrivateClientFrameVisitor implements FrameVisitor {
 	@Override
 	public void visit(AcceptPrivateConnection acceptPrivateConnection) {
 		System.out.println("PrivateClientFrameVisitor : TU NE DOIS PAS RENTRER ICI");
+	}
+
+	@Override
+	public void visit(PrivateMessage privateMessage) {
+		clientChatHack.displayFrameDialog(privateMessage);
 	}
 
 }

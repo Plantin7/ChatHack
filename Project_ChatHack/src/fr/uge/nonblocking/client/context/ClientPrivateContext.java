@@ -9,6 +9,7 @@ import java.util.Queue;
 
 import fr.uge.nonblocking.client.ClientChatHack;
 import fr.uge.nonblocking.frame.Frame;
+import fr.uge.nonblocking.frame.PrivateMessage;
 import fr.uge.nonblocking.readers.complexReader.FrameReader;
 import fr.uge.nonblocking.visitors.PrivateClientFrameVisitor;
 
@@ -156,6 +157,7 @@ public class ClientPrivateContext {
 		if (!sc.finishConnect()) {
 			return;
 		}
+		queueMessage(new PrivateMessage("ToTo", "MPMPMPMP").asByteBuffer());
 		updateInterestOps();
 	}
 }

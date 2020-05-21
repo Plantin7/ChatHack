@@ -9,10 +9,13 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Level;
@@ -24,11 +27,13 @@ import fr.uge.nonblocking.frame.AcceptPrivateConnection;
 import fr.uge.nonblocking.frame.AuthentificationMessage;
 import fr.uge.nonblocking.frame.ErrorPrivateConnection;
 import fr.uge.nonblocking.frame.Frame;
+import fr.uge.nonblocking.frame.PrivateMessage;
 import fr.uge.nonblocking.frame.PublicMessage;
 import fr.uge.nonblocking.frame.RefusePrivateConnection;
 import fr.uge.nonblocking.frame.RequestPrivateConnection;
 import fr.uge.nonblocking.server.context.DBContext;
 import fr.uge.nonblocking.server.context.ServerContext;
+import fr.uge.protocol.ChatHackProtocol;
 
 public class ClientChatHack {
 
@@ -173,7 +178,11 @@ public class ClientChatHack {
 					break;
 				}
 				case SEND_ACCEPT_PRIVATE_CONNECTION : {
-					uniqueContext.queueMessage(new AcceptPrivateConnection(line).asByteBuffer());
+					var port = serverSocketChannel.socket().getLocalPort();
+					var hostName = serverSocketChannel.socket().getInetAddress().getHostName();
+					var socketAddress = new InetSocketAddress(hostName, port);
+					var connectId = generateConnectId();
+					uniqueContext.queueMessage(new AcceptPrivateConnection(line, socketAddress, connectId).asByteBuffer());
 					clientAwaitingResponse.remove(line);
 					//TODO
 					break;
@@ -190,6 +199,10 @@ public class ClientChatHack {
 			}
 		}
 	}
+	
+	private long generateConnectId() {
+		return new Random().nextLong();
+	} 
 
 	public void launch() throws IOException {
 		/*sc.configureBlocking(false);
@@ -216,6 +229,10 @@ public class ClientChatHack {
 
 		while (!Thread.interrupted()) {
 			try {
+				if(uniqueContext.isClosed()) {
+					selector.close();
+					return;
+				}
 				selector.select(this::treatKey);
 				processCommands();
 			} catch (UncheckedIOException tunneled) {
@@ -284,8 +301,7 @@ public class ClientChatHack {
 			// ignore exception
 		}
 	}
-
-
+	
 	/**
 	 * Fill the workspace of the Bytebuffer with bytes read from sc.
 	 *
@@ -324,7 +340,19 @@ public class ClientChatHack {
 
 	public void manageAcceptPrivateConnection(AcceptPrivateConnection acceptPrivateConnection) {
 		displayFrameDialog(acceptPrivateConnection);
-		myPendingRequest.remove(acceptPrivateConnection.getLogin());
+		var message = myPendingRequest.remove(acceptPrivateConnection.getLogin());
+		
+		try {
+			var sc = SocketChannel.open();
+			sc.configureBlocking(false);
+			var clientKey = sc.register(selector, SelectionKey.OP_CONNECT);
+			var ctx = new ClientPrivateContext(this, clientKey);
+			clientKey.attach(ctx);
+			sc.connect(acceptPrivateConnection.getSocketAddress());
+		}
+		catch(IOException e) {
+			//
+		}
 	}
 
 	public static void main(String[] args) throws NumberFormatException, IOException {
@@ -345,3 +373,8 @@ public class ClientChatHack {
 		System.out.println("Usage : ClientChatHack - hostname - port - path_file - login - (password)");
 	}
 }
+
+/*
+ * Commande avec un objet !
+ * 
+ */

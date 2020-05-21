@@ -30,6 +30,10 @@ public class ClientContext {
 		this.sc = (SocketChannel) key.channel();
 		this.frameVisitor = new ClientFrameVisitor(this, client);
 	}
+	
+	public boolean isClosed() {
+		return closed;
+	}
 
 	/**
 	 * Process the content of bbin
@@ -114,6 +118,7 @@ public class ClientContext {
 	private void silentlyClose() {
 		try {
 			sc.close();
+			// client.closeSelector();
 		} catch (IOException e) {
 			// ignore exception
 		}

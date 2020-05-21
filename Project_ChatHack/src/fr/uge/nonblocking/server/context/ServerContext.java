@@ -24,7 +24,7 @@ public class ServerContext {
 	final private long id;
 	final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
 	final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
-	final private Queue<ByteBuffer> queue = new LinkedList<>();
+	final private Queue<ByteBuffer> queue = new LinkedList<>(); // TODO
 	final private FrameReader frameReader = new FrameReader();
 	final private ServerChatHack server;
 	private final ServerFrameVisitor frameVisitor;
@@ -206,4 +206,19 @@ public class ServerContext {
  * - Le server -> peut demander si un login existe (2) byte + id
  * - Réponse BDD server : (1)1 byte + long ou (0)1 byte + 1 long
  */
+
+/*
+ * Connection
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ */
+
+
+
+
+
 

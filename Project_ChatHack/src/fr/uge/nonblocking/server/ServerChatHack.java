@@ -245,7 +245,9 @@ public class ServerChatHack {
 		var contextDest = map.get(loginDest);
 		if(contextDest != null) {
 			var expeditor = getLoginFromId(ctx.getId()).get();
-			contextDest.queueMessage(new AcceptPrivateConnection(expeditor).asByteBuffer());
+			var socketAddress = acceptPrivateConnection.getSocketAddress();
+			var connectId = acceptPrivateConnection.getConnectId();
+			contextDest.queueMessage(new AcceptPrivateConnection(expeditor, socketAddress, connectId).asByteBuffer());
 		}
 		else {
 			System.out.println("RefuseConnection : ON NE DOIT PAS RENTRER ICI" );

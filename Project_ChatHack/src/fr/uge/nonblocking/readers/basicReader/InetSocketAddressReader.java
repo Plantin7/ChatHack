@@ -9,15 +9,15 @@ import fr.uge.nonblocking.readers.Reader;
 import fr.uge.nonblocking.readers.Reader.ProcessStatus;
 
 public class InetSocketAddressReader implements Reader<InetSocketAddress>{
-	
-	private static Logger logger = Logger.getLogger(InetSocketAddressReader.class.getName());
-	private enum State {DONE, WAITING_PORT, WAITING_IP, ERROR}
 
-	private State state = State.WAITING_PORT;
-	
+	private static Logger logger = Logger.getLogger(InetSocketAddressReader.class.getName());
+	private enum State {DONE, WAITING_HOSTNAME, WAITING_PORT, ERROR}
+
+	private State state = State.WAITING_HOSTNAME;
+
 	private IntReader intReader = new IntReader();
 	private StringReader stringReader = new StringReader();
-	
+
 	private int port;
 	private String hostName;
 
@@ -27,6 +27,15 @@ public class InetSocketAddressReader implements Reader<InetSocketAddress>{
 			throw new IllegalStateException();
 		}
 		switch (state) {
+		case WAITING_HOSTNAME: {
+			var stringStatus = getStringPart(stringReader, bb);
+			if(stringStatus != ProcessStatus.DONE) {
+				return stringStatus;
+			}
+			hostName = stringReader.get();
+			System.out.println(hostName);
+			state = State.WAITING_PORT;
+		}
 		case WAITING_PORT: {
 			var integerStatus = getStringPart(intReader, bb);
 			if(integerStatus != ProcessStatus.DONE) {
@@ -34,14 +43,7 @@ public class InetSocketAddressReader implements Reader<InetSocketAddress>{
 			}
 			port = intReader.get();
 			if(port < 1024 || port > 65535 ) { logger.info("Bad Port !"); state = State.ERROR; return ProcessStatus.ERROR; }
-			state = State.WAITING_IP;
-		}
-		case WAITING_IP: {
-			var stringStatus = getStringPart(stringReader, bb);
-			if(stringStatus != ProcessStatus.DONE) {
-				return stringStatus;
-			}
-			hostName = stringReader.get();
+
 			state = State.DONE;
 			return ProcessStatus.DONE;
 		}
@@ -53,10 +55,14 @@ public class InetSocketAddressReader implements Reader<InetSocketAddress>{
 	private ProcessStatus getStringPart(Reader<?> reader, ByteBuffer bb) {
 		Reader.ProcessStatus status = reader.process(bb);
 		switch (status) {
-		case DONE: return ProcessStatus.DONE;
-		case REFILL: return ProcessStatus.REFILL;
-		default: throw new AssertionError();
+		case DONE:
+			return ProcessStatus.DONE;
+		case REFILL:
+			return ProcessStatus.REFILL;
+		case ERROR:
+			return ProcessStatus.ERROR;
 		}
+		throw new AssertionError();
 	}
 
 	@Override
@@ -69,7 +75,7 @@ public class InetSocketAddressReader implements Reader<InetSocketAddress>{
 
 	@Override
 	public void reset() {
-		state = State.WAITING_PORT;
+		state = State.WAITING_HOSTNAME;
 		intReader.reset();
 		stringReader.reset();
 		hostName = null;
