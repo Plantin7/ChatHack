@@ -6,7 +6,7 @@ import java.nio.ByteBuffer;
 import fr.uge.nonblocking.frame.AcceptPrivateConnection;
 import fr.uge.nonblocking.frame.AuthentificationMessage;
 import fr.uge.nonblocking.frame.ErrorPrivateConnection;
-import fr.uge.nonblocking.frame.Frame;
+import fr.uge.nonblocking.frame.PublicFrame;
 import fr.uge.nonblocking.frame.PrivateMessage;
 import fr.uge.nonblocking.frame.PublicMessage;
 import fr.uge.nonblocking.frame.RefusePrivateConnection;
@@ -17,7 +17,7 @@ import fr.uge.nonblocking.frame.StringMessage;
 import fr.uge.nonblocking.readers.sequentialreader.SequentialMessageReader;
 import fr.uge.protocol.ChatHackProtocol;
 
-public class FrameReader implements Reader<Frame> {
+public class FrameReader implements Reader<PublicFrame> {
 
 	private enum State { DONE, WAITING_OP, WAITING_FRAME, ERROR }
 
@@ -43,14 +43,6 @@ public class FrameReader implements Reader<Frame> {
 			.addPart(stringReader, this::setStringOne)
 			.addPart(stringReader, this::setStringTwo)
 			.addValueRetriever(this::computePublicMessage)
-			.build();
-	
-	private Reader<PrivateMessage> privateMessageReader = 
-			SequentialMessageReader
-			.<PrivateMessage>create()
-			.addPart(stringReader, this::setStringOne)
-			.addPart(stringReader, this::setStringTwo)
-			.addValueRetriever(this::computePrivateMessage)
 			.build();
 	
 	private Reader<AuthentificationMessage> authentificationReader =
@@ -113,8 +105,8 @@ public class FrameReader implements Reader<Frame> {
 			.addValueRetriever(this::computeSendPrivateConnectionMessage)
 			.build();
 	
-	private Reader<? extends Frame> currentFrameReader;
-	private Frame frame;
+	private Reader<? extends PublicFrame> currentFrameReader;
+	private PublicFrame frame;
 	private String stringOne;
 	private String stringTwo;
 	private InetSocketAddress socketAddress;
@@ -126,7 +118,6 @@ public class FrameReader implements Reader<Frame> {
 	private void setInetSocketAddress(InetSocketAddress socketAddress) { this.socketAddress = socketAddress ;}
 	
 	private PublicMessage computePublicMessage() { return new PublicMessage(stringOne, stringTwo); } // Login + message
-	private PrivateMessage computePrivateMessage() { return new PrivateMessage(stringOne, stringTwo); } // Login + message
 	private AuthentificationMessage computeAuthentificationMessage() { return new AuthentificationMessage(stringOne, stringTwo); } // login + password
 	private ResponseAuthentification computeResponseAuthentificationMessage() { return new ResponseAuthentification(stringOne); }
 	private RequestPrivateConnection computeRequestPrivateConnectionMessage() { return new RequestPrivateConnection(stringOne, stringTwo); }
@@ -196,10 +187,6 @@ public class FrameReader implements Reader<Frame> {
 				currentFrameReader = acceptPrivateConnectionReader;
 				break;
 			}
-			case ChatHackProtocol.OPCODE_SEND_PRIVATE_MESSAGE : {
-				currentFrameReader = privateMessageReader;
-				break;
-			}
 			default:
 				state = State.ERROR;
 				return ProcessStatus.ERROR;
@@ -236,7 +223,7 @@ public class FrameReader implements Reader<Frame> {
 	}
 	
 	@Override
-	public Frame get() {
+	public PublicFrame get() {
 		if (state != State.DONE) {
 			throw new IllegalStateException();
 		}
@@ -247,7 +234,6 @@ public class FrameReader implements Reader<Frame> {
 	public void reset() {
 		state = State.WAITING_OP;
 		publicMessageReader.reset();
-		privateMessageReader.reset();
 		authentificationReader.reset();
 		responseAuthentificationReader.reset();
 		requestPrivateConnectionReader.reset();

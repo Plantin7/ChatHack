@@ -2,7 +2,7 @@ package fr.uge.nonblocking.visitors;
 
 import fr.uge.nonblocking.frame.*;
 
-public interface FrameVisitor {
+public interface PublicFrameVisitor {
 	void visit(PublicMessage publicMessage);
 	void visit(AuthentificationMessage authentificationMessage);
 	void visit(ResponseAuthentification responseAuthentification);
@@ -11,6 +11,5 @@ public interface FrameVisitor {
 	void visit(ErrorPrivateConnection errorPrivateConnection);
 	void visit(RefusePrivateConnection refusePrivateConnection);
 	void visit(AcceptPrivateConnection acceptPrivateConnection);
-	void visit(PrivateMessage privateMessage);
 	void visit(SendPrivateConnection sendPrivateConnection);
 }

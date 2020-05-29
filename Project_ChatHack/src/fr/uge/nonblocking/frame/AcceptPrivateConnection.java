@@ -5,10 +5,10 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
 import fr.uge.nonblocking.client.ClientChatHack;
-import fr.uge.nonblocking.visitors.FrameVisitor;
+import fr.uge.nonblocking.visitors.PublicFrameVisitor;
 import fr.uge.protocol.ChatHackProtocol;
 
-public class AcceptPrivateConnection implements Frame {
+public class AcceptPrivateConnection implements PublicFrame {
 	
 	private final InetSocketAddress socketAddress;
 	private final long connectId;
@@ -55,7 +55,7 @@ public class AcceptPrivateConnection implements Frame {
 	}
 
 	@Override
-	public void accept(FrameVisitor visitor) {
+	public void accept(PublicFrameVisitor visitor) {
 		visitor.visit(this);
 	}
 }

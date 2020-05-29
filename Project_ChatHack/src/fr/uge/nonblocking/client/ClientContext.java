@@ -8,7 +8,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 import fr.uge.nonblocking.visitors.ClientFrameVisitor;
-import fr.uge.nonblocking.frame.Frame;
+import fr.uge.nonblocking.frame.PublicFrame;
 import fr.uge.nonblocking.readers.FrameReader;
 
 public class ClientContext {
@@ -45,7 +45,7 @@ public class ClientContext {
 			var status = frameReader.process(bbin);
 			switch (status) {
 			case DONE:
-				Frame frame = frameReader.get();
+				PublicFrame frame = frameReader.get();
 				frameReader.reset();
 				treatFrame(frame);
 				break;
@@ -58,7 +58,7 @@ public class ClientContext {
 		}
 	}
 
-	private void treatFrame(Frame frame) {
+	private void treatFrame(PublicFrame frame) {
 		frame.accept(frameVisitor);
 	}
 

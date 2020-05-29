@@ -3,10 +3,10 @@ package fr.uge.nonblocking.frame;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
-import fr.uge.nonblocking.visitors.FrameVisitor;
+import fr.uge.nonblocking.visitors.PublicFrameVisitor;
 import fr.uge.protocol.ChatHackProtocol;
 
-public class PublicMessage implements Frame {
+public class PublicMessage implements PublicFrame {
 	private final String from;
 	private final String message;
 	private final static Charset UTF8 = Charset.forName("UTF-8");
@@ -31,7 +31,7 @@ public class PublicMessage implements Frame {
 	}
 
 	@Override
-	public void accept(FrameVisitor visitor) {
+	public void accept(PublicFrameVisitor visitor) {
 		visitor.visit(this);		
 	}
 }

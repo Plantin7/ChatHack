@@ -24,7 +24,8 @@ import java.util.logging.Logger;
 import fr.uge.nonblocking.frame.AcceptPrivateConnection;
 import fr.uge.nonblocking.frame.AuthentificationMessage;
 import fr.uge.nonblocking.frame.ErrorPrivateConnection;
-import fr.uge.nonblocking.frame.Frame;
+import fr.uge.nonblocking.frame.PrivateFrame;
+import fr.uge.nonblocking.frame.PublicFrame;
 import fr.uge.nonblocking.frame.PrivateMessage;
 import fr.uge.nonblocking.frame.PublicMessage;
 import fr.uge.nonblocking.frame.RefusePrivateConnection;
@@ -318,8 +319,12 @@ public class ClientChatHack {
 		return true;
 	}
 
-	public void displayFrameDialog(Frame frame) {
+	public void displayFrameDialog(PublicFrame frame) {
 		System.out.println(frame);
+	}
+	
+	public void displayFrameDialog(PrivateFrame privateMessage) {
+		System.out.println(privateMessage);
 	}
 
 	public void errorPendingPrivateConnectionRequest(ErrorPrivateConnection errorPrivateConnection) {

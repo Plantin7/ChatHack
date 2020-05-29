@@ -4,10 +4,10 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-import fr.uge.nonblocking.visitors.FrameVisitor;
+import fr.uge.nonblocking.visitors.PublicFrameVisitor;
 import fr.uge.protocol.ChatHackProtocol;
 
-public class ErrorPrivateConnection implements Frame {
+public class ErrorPrivateConnection implements PublicFrame {
 
 	private final static Charset UTF8 = StandardCharsets.UTF_8;
 	private final String login;
@@ -34,7 +34,7 @@ public class ErrorPrivateConnection implements Frame {
 	}
 
 	@Override
-	public void accept(FrameVisitor visitor) {
+	public void accept(PublicFrameVisitor visitor) {
 		visitor.visit(this);
 	}
 }

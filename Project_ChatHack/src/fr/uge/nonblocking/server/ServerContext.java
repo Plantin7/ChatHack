@@ -8,7 +8,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.logging.Logger;
 
-import fr.uge.nonblocking.frame.Frame;
+import fr.uge.nonblocking.frame.PublicFrame;
 import fr.uge.nonblocking.readers.FrameReader;
 import fr.uge.nonblocking.readers.Reader;
 import fr.uge.nonblocking.visitors.ServerFrameVisitor;
@@ -51,7 +51,7 @@ public class ServerContext {
 			Reader.ProcessStatus status = frameReader.process(bbin);
 			switch (status) {
 			case DONE:
-				Frame frame = frameReader.get();
+				PublicFrame frame = frameReader.get();
 				frameReader.reset();
 				treatFrame(frame);
 				break;
@@ -64,7 +64,7 @@ public class ServerContext {
 		}
 	}
 
-	private void treatFrame(Frame frame) {
+	private void treatFrame(PublicFrame frame) {
 		frame.accept(frameVisitor);
 	}
 

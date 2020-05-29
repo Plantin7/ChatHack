@@ -4,7 +4,7 @@ import fr.uge.nonblocking.client.ClientChatHack;
 import fr.uge.nonblocking.client.ClientContext;
 import fr.uge.nonblocking.frame.*;
 
-public class ClientFrameVisitor implements FrameVisitor {
+public class ClientFrameVisitor implements PublicFrameVisitor {
     private final ClientContext ctx;
     private final ClientChatHack clientChatHack;
 
@@ -52,12 +52,7 @@ public class ClientFrameVisitor implements FrameVisitor {
 	public void visit(AcceptPrivateConnection acceptPrivateConnection) {
 		clientChatHack.manageAcceptPrivateConnection(acceptPrivateConnection);
 	}
-
-	@Override
-	public void visit(PrivateMessage privateMessage) {
-		System.out.println("ClientFrameVisitor : TU NE DOIS PAS RENTRER ICI !");
-	}
-
+	
 	@Override
 	public void visit(SendPrivateConnection sendPrivateConnection) {
 		clientChatHack.manageRequestPrivateConnection(sendPrivateConnection);

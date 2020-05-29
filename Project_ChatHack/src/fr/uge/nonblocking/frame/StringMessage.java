@@ -1,12 +1,12 @@
 package fr.uge.nonblocking.frame;
 
-import fr.uge.nonblocking.visitors.FrameVisitor;
+import fr.uge.nonblocking.visitors.PublicFrameVisitor;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-public class StringMessage implements Frame {
+public class StringMessage implements PublicFrame {
 	
 	private final static Charset UTF8 = StandardCharsets.UTF_8;
 	private final String stringMessage;
@@ -25,7 +25,7 @@ public class StringMessage implements Frame {
 	}
 
 	@Override
-	public void accept(FrameVisitor visitor) {
+	public void accept(PublicFrameVisitor visitor) {
 		visitor.visit(this);
 	}
 	

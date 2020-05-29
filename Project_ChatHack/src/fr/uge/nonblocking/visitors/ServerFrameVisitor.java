@@ -4,7 +4,7 @@ import fr.uge.nonblocking.frame.*;
 import fr.uge.nonblocking.server.ServerChatHack;
 import fr.uge.nonblocking.server.ServerContext;
 
-public class ServerFrameVisitor implements FrameVisitor {
+public class ServerFrameVisitor implements PublicFrameVisitor {
 
     private final ServerContext ctx;
     private final ServerChatHack server;
@@ -52,11 +52,6 @@ public class ServerFrameVisitor implements FrameVisitor {
 	@Override
 	public void visit(AcceptPrivateConnection acceptPrivateConnection) {
 		server.sendAcceptRequestConnectionToClient(acceptPrivateConnection, ctx);
-	}
-
-	@Override
-	public void visit(PrivateMessage privateMessage) {
-		System.out.println("ServerFrameVisitor : TU NE DOIS PAS RENTRER ICI !");
 	}
 
 	@Override

@@ -7,9 +7,11 @@ import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import fr.uge.nonblocking.frame.Frame;
+import fr.uge.nonblocking.frame.PublicFrame;
+import fr.uge.nonblocking.frame.PrivateFrame;
 import fr.uge.nonblocking.frame.PrivateMessage;
 import fr.uge.nonblocking.readers.FrameReader;
+import fr.uge.nonblocking.readers.PrivateFrameReader;
 import fr.uge.nonblocking.visitors.PrivateClientFrameVisitor;
 
 public class ClientPrivateContext {
@@ -20,7 +22,7 @@ public class ClientPrivateContext {
 	final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
 	final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
 	final private Queue<ByteBuffer> queue = new LinkedList<>(); // buffers read-mode
-	final private FrameReader frameReader = new FrameReader();
+	final private PrivateFrameReader frameReader = new PrivateFrameReader();
 	private final PrivateClientFrameVisitor frameVisitor;
 
 	private boolean closed = false;
@@ -42,7 +44,7 @@ public class ClientPrivateContext {
 			var status = frameReader.process(bbin);
 			switch (status) {
 			case DONE:
-				Frame frame = frameReader.get();
+				PrivateFrame frame = frameReader.get();
 				frameReader.reset();
 				treatFrame(frame);
 				break;
@@ -55,7 +57,7 @@ public class ClientPrivateContext {
 		}
 	}
 
-	private void treatFrame(Frame frame) {
+	private void treatFrame(PrivateFrame frame) {
 		frame.accept(frameVisitor);
 	}
 
