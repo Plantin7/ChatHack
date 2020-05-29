@@ -58,4 +58,9 @@ public class ServerFrameVisitor implements FrameVisitor {
 	public void visit(PrivateMessage privateMessage) {
 		System.out.println("ServerFrameVisitor : TU NE DOIS PAS RENTRER ICI !");
 	}
+
+	@Override
+	public void visit(SendPrivateConnection sendPrivateConnection) {
+		System.out.println("ServerFrameVisitor : TU NE DOIS PAS RENTRER ICI !");
+	}
 }

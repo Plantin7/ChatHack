@@ -35,7 +35,7 @@ public class ClientFrameVisitor implements FrameVisitor {
 
 	@Override
 	public void visit(RequestPrivateConnection requestPrivateConnection) {
-		clientChatHack.manageRequestPrivateConnection(requestPrivateConnection);
+		System.out.println("ClientFrameVisitor : TU NE DOIS PAS RENTRER ICI !");
 	}
 
 	@Override
@@ -56,6 +56,11 @@ public class ClientFrameVisitor implements FrameVisitor {
 	@Override
 	public void visit(PrivateMessage privateMessage) {
 		System.out.println("ClientFrameVisitor : TU NE DOIS PAS RENTRER ICI !");
+	}
+
+	@Override
+	public void visit(SendPrivateConnection sendPrivateConnection) {
+		clientChatHack.manageRequestPrivateConnection(sendPrivateConnection);
 	}
 	
 }

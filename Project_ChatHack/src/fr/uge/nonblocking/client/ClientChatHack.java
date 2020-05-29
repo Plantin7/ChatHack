@@ -31,6 +31,7 @@ import fr.uge.nonblocking.frame.PrivateMessage;
 import fr.uge.nonblocking.frame.PublicMessage;
 import fr.uge.nonblocking.frame.RefusePrivateConnection;
 import fr.uge.nonblocking.frame.RequestPrivateConnection;
+import fr.uge.nonblocking.frame.SendPrivateConnection;
 import fr.uge.nonblocking.server.context.DBContext;
 import fr.uge.nonblocking.server.context.ServerContext;
 import fr.uge.protocol.ChatHackProtocol;
@@ -328,9 +329,9 @@ public class ClientChatHack {
 		myPendingRequest.remove(errorPrivateConnection.getLogin());
 	}
 
-	public void manageRequestPrivateConnection(RequestPrivateConnection requestPrivateConnection) {
-		displayFrameDialog(requestPrivateConnection);
-		clientAwaitingResponse.add(requestPrivateConnection.getLogin());
+	public void manageRequestPrivateConnection(SendPrivateConnection sendPrivateConnection) {
+		displayFrameDialog(sendPrivateConnection);
+		clientAwaitingResponse.add(sendPrivateConnection.getLogin());
 	}
 
 	public void manageRefusePrivateConnection(RefusePrivateConnection refusePrivateConnection) {

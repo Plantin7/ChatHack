@@ -21,6 +21,7 @@ import fr.uge.nonblocking.frame.ErrorPrivateConnection;
 import fr.uge.nonblocking.frame.RefusePrivateConnection;
 import fr.uge.nonblocking.frame.RequestPrivateConnection;
 import fr.uge.nonblocking.frame.ResponseAuthentification;
+import fr.uge.nonblocking.frame.SendPrivateConnection;
 import fr.uge.nonblocking.frame.StringMessage;
 import fr.uge.nonblocking.readers.complexReader.RefusePrivateConnectionReader;
 import fr.uge.nonblocking.server.context.DBContext;
@@ -221,7 +222,7 @@ public class ServerChatHack {
 		var contextDest = map.get(loginDest);
 		if(contextDest != null) {
 			var expeditor = getLoginFromId(ctx.getId()).get();
-			contextDest.queueMessage(new RequestPrivateConnection(expeditor).asByteBuffer());
+			contextDest.queueMessage(new SendPrivateConnection(expeditor).asByteBuffer()); // TODO Create New Object
 		}
 		else {
 			ctx.queueMessage(new ErrorPrivateConnection(loginDest).asByteBuffer());

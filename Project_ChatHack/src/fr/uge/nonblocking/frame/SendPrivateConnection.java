@@ -7,23 +7,20 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-public class RequestPrivateConnection implements Frame {
+public class SendPrivateConnection implements Frame {
 
     private final static Charset UTF8 = StandardCharsets.UTF_8;
     private final String login;
-    private final String message;
-
-    public RequestPrivateConnection(String login, String message) {
-		this.login = login;
-        this.message = message;
-    }
     
+    public SendPrivateConnection(String login) {
+		this.login = login;
+	}
+
 	@Override
     public ByteBuffer asByteBuffer() {
     	var bbLogin = UTF8.encode(login);
-    	var bbMessage = UTF8.encode(message);
-        var bb = ByteBuffer.allocate(Byte.BYTES + 2 * Integer.BYTES + bbLogin.limit() + bbMessage.limit());
-        bb.put(ChatHackProtocol.OPCODE_ASK_PRIVATE_CONNECTION).putInt(bbLogin.limit()).put(bbLogin).putInt(bbMessage.limit()).put(bbMessage);
+        var bb = ByteBuffer.allocate(Byte.BYTES + Integer.BYTES + bbLogin.limit());
+        bb.put(ChatHackProtocol.OPCODE_SEND_PRIVATE_CONNECTION).putInt(bbLogin.limit()).put(bbLogin);
         return bb.flip();
     }
 
@@ -31,13 +28,12 @@ public class RequestPrivateConnection implements Frame {
         return login;
     }
     
-    public String getMessage() {
-    	return message;
-    }
-
     @Override
     public String toString() {
-        return login + " : " + message;
+        return "The " + "\"" + 
+        		login + "\"" + 
+        		" client wants to send you a message. Do you accept ? \n/accept " + 
+        		login + "\n/refuse " + login;
     }
 
     @Override

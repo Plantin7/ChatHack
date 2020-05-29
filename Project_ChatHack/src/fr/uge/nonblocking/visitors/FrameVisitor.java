@@ -12,4 +12,5 @@ public interface FrameVisitor {
 	void visit(RefusePrivateConnection refusePrivateConnection);
 	void visit(AcceptPrivateConnection acceptPrivateConnection);
 	void visit(PrivateMessage privateMessage);
+	void visit(SendPrivateConnection sendPrivateConnection);
 }
