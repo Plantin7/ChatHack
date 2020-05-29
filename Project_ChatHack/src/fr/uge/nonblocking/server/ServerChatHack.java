@@ -23,7 +23,6 @@ import fr.uge.nonblocking.frame.RequestPrivateConnection;
 import fr.uge.nonblocking.frame.ResponseAuthentification;
 import fr.uge.nonblocking.frame.SendPrivateConnection;
 import fr.uge.nonblocking.frame.StringMessage;
-import fr.uge.nonblocking.readers.complexReader.RefusePrivateConnectionReader;
 import fr.uge.nonblocking.server.context.DBContext;
 import fr.uge.nonblocking.server.context.ServerContext;
 import fr.uge.nonblocking.server.context.ServerContext.ConnectionTypes;

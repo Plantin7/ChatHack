@@ -12,7 +12,6 @@ import fr.uge.nonblocking.client.context.ClientContext;
 import fr.uge.nonblocking.frame.ResponseAuthentification;
 import fr.uge.nonblocking.readers.Reader;
 import fr.uge.nonblocking.readers.complexReader.DBReader;
-import fr.uge.nonblocking.readers.complexReader.PublicMessageReader;
 import fr.uge.nonblocking.server.ServerChatHack;
 import fr.uge.protocol.ChatHackProtocol;
 
