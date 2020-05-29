@@ -9,8 +9,8 @@ import java.util.Queue;
 import java.util.logging.Logger;
 
 import fr.uge.nonblocking.client.ClientContext;
+import fr.uge.nonblocking.database.ResponseDataBaseReader;
 import fr.uge.nonblocking.frame.ResponseAuthentification;
-import fr.uge.nonblocking.readers.DBReader;
 import fr.uge.nonblocking.readers.Reader;
 import fr.uge.protocol.ChatHackProtocol;
 
@@ -23,7 +23,7 @@ public class DBContext {
     final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
     final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
     final private Queue<ByteBuffer> queue = new LinkedList<>();      // Queue de bytebuffer en read mode
-    final private DBReader dbReader = new DBReader();
+    final private ResponseDataBaseReader dbReader = new ResponseDataBaseReader();
     final private ServerChatHack server;
     private boolean closed = false;
 

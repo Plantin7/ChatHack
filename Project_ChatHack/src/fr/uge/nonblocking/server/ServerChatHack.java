@@ -14,6 +14,8 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import fr.uge.nonblocking.database.RequestAnonymousAuthentication;
+import fr.uge.nonblocking.database.RequestAuthenticationWithPassword;
 import fr.uge.nonblocking.frame.AcceptPrivateConnection;
 import fr.uge.nonblocking.frame.AuthentificationMessage;
 import fr.uge.nonblocking.frame.DB;
@@ -148,13 +150,8 @@ public class ServerChatHack {
 	public void sendAuthentificationToDB(AuthentificationMessage auth, ServerContext context) {
 		if(!map.containsKey(auth.getLogin())) {
 			map.put(auth.getLogin(), context);
-			var id = context.getId();
-			var bbLogin = UTF8.encode(auth.getLogin());
 			context.setConnectionTypeValidated();
-			var bbPassword = UTF8.encode(auth.getPassword());
-			var bb = ByteBuffer.allocate(Byte.BYTES + Long.BYTES + 2 * Integer.BYTES + bbLogin.limit() + bbPassword.limit());
-			bb.put(ServerMDPProtococol.OPCODE_ASK_AUTH_TO_DB_WITH_PASWWORD).putLong(id).putInt(bbLogin.limit()).put(bbLogin).putInt(bbPassword.limit()).put(bbPassword).flip();
-			dbContext.queueMessage(bb);			
+			dbContext.queueMessage(new RequestAuthenticationWithPassword(context.getId(), auth.getLogin(), auth.getPassword()).asByteBuffer());			
 		}
 		else {
 			context.queueMessage(new ResponseAuthentification("Login already in use").asByteBuffer());
@@ -164,13 +161,9 @@ public class ServerChatHack {
 
 	public void sendAnonymousAuthentificationToDB(StringMessage auth, ServerContext context) {
 		if(!map.containsKey(auth.getStringMessage())) {
-			map.put(auth.getStringMessage(), context); // String Message = login
-			var id = context.getId();
-			var bbLogin = UTF8.encode(auth.getStringMessage());
+			map.put(auth.getStringMessage(), context);
 			context.setConnectionTypeAnonymous();
-			var bb = ByteBuffer.allocate(Byte.BYTES + Long.BYTES + Integer.BYTES + bbLogin.limit());
-			bb.put(ServerMDPProtococol.OPCODE_ASK_AUTH_TO_DB_WITHOUT_PASSWORD).putLong(id).putInt(bbLogin.limit()).put(bbLogin).flip();
-			dbContext.queueMessage(bb);			
+			dbContext.queueMessage(new RequestAnonymousAuthentication(context.getId(), auth.getStringMessage()).asByteBuffer());			
 		}
 		else {
 			context.queueMessage(new ResponseAuthentification("Login already in use").asByteBuffer());

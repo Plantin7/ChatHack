@@ -1,10 +1,13 @@
-package fr.uge.nonblocking.readers;
+package fr.uge.nonblocking.database;
 
 import java.nio.ByteBuffer;
 
 import fr.uge.nonblocking.frame.DB;
+import fr.uge.nonblocking.readers.LongReader;
+import fr.uge.nonblocking.readers.Reader;
+import fr.uge.nonblocking.readers.Reader.ProcessStatus;
 
-public class DBReader implements Reader<DB>{
+public class ResponseDataBaseReader implements Reader<DB>{
 	private enum State {DONE, WAITING_OP, WAITING_ID, ERROR}
 
 	private State state = State.WAITING_OP;
