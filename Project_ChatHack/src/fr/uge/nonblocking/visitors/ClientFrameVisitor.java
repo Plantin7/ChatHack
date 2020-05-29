@@ -19,7 +19,7 @@ public class ClientFrameVisitor implements PublicFrameVisitor {
     }
 
     @Override
-    public void visit(AuthentificationMessage authentificationMessage) {
+    public void visit(AuthentiticationMessage authentificationMessage) {
     	System.out.println("ClientFrameVisitor : TU NE DOIS PAS RENTRER ICI");
     }
 
@@ -29,7 +29,7 @@ public class ClientFrameVisitor implements PublicFrameVisitor {
 	}
 
 	@Override
-	public void visit(StringMessage stringMessage) {
+	public void visit(AnonymousAuthenticationMessage stringMessage) {
 		System.out.println("ServerFrameVisitor : TU NE DOIS PAS RENTRER ICI !");
 	}
 

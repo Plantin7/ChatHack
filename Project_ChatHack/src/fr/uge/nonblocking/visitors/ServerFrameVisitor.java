@@ -20,7 +20,7 @@ public class ServerFrameVisitor implements PublicFrameVisitor {
     }
 
     @Override
-    public void visit(AuthentificationMessage authentificationMessage) {
+    public void visit(AuthentiticationMessage authentificationMessage) {
         server.sendAuthentificationToDB(authentificationMessage, ctx);
     }
 
@@ -30,8 +30,8 @@ public class ServerFrameVisitor implements PublicFrameVisitor {
 	}
 
 	@Override
-	public void visit(StringMessage stringMessage) {
-		server.sendAnonymousAuthentificationToDB(stringMessage, ctx);
+	public void visit(AnonymousAuthenticationMessage anonymousAuthenticationMessage) {
+		server.sendAnonymousAuthentificationToDB(anonymousAuthenticationMessage, ctx);
 	}
 
 	@Override

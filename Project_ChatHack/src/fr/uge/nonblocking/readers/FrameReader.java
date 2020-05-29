@@ -4,7 +4,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
 import fr.uge.nonblocking.frame.AcceptPrivateConnection;
-import fr.uge.nonblocking.frame.AuthentificationMessage;
+import fr.uge.nonblocking.frame.AuthentiticationMessage;
 import fr.uge.nonblocking.frame.ErrorPrivateConnection;
 import fr.uge.nonblocking.frame.PublicFrame;
 import fr.uge.nonblocking.frame.PrivateMessage;
@@ -13,7 +13,7 @@ import fr.uge.nonblocking.frame.RefusePrivateConnection;
 import fr.uge.nonblocking.frame.RequestPrivateConnection;
 import fr.uge.nonblocking.frame.ResponseAuthentification;
 import fr.uge.nonblocking.frame.SendPrivateConnection;
-import fr.uge.nonblocking.frame.StringMessage;
+import fr.uge.nonblocking.frame.AnonymousAuthenticationMessage;
 import fr.uge.nonblocking.readers.sequentialreader.SequentialMessageReader;
 import fr.uge.protocol.ChatHackProtocol;
 
@@ -45,9 +45,9 @@ public class FrameReader implements Reader<PublicFrame> {
 			.addValueRetriever(this::computePublicMessage)
 			.build();
 	
-	private Reader<AuthentificationMessage> authentificationReader =
+	private Reader<AuthentiticationMessage> authentificationReader =
 			SequentialMessageReader
-			.<AuthentificationMessage>create()
+			.<AuthentiticationMessage>create()
 			.addPart(stringReader, this::setStringOne)
 			.addPart(stringReader, this::setStringTwo)
 			.addValueRetriever(this::computeAuthentificationMessage)
@@ -91,11 +91,11 @@ public class FrameReader implements Reader<PublicFrame> {
 			.addValueRetriever(this::computeAcceptPrivateConnectionMessage)
 			.build();
 	
-	private Reader<StringMessage> stringMessageReader =
+	private Reader<AnonymousAuthenticationMessage> anonymousAuthenticationMessageReader =
 			SequentialMessageReader
-			.<StringMessage>create()
+			.<AnonymousAuthenticationMessage>create()
 			.addPart(stringReader, this::setStringOne)
-			.addValueRetriever(this::computeStringMessage)
+			.addValueRetriever(this::computeAnonymousAuthenticationMessage)
 			.build();
 	
 	private Reader<SendPrivateConnection> sendPrivateConnectionReader =
@@ -118,13 +118,13 @@ public class FrameReader implements Reader<PublicFrame> {
 	private void setInetSocketAddress(InetSocketAddress socketAddress) { this.socketAddress = socketAddress ;}
 	
 	private PublicMessage computePublicMessage() { return new PublicMessage(stringOne, stringTwo); } // Login + message
-	private AuthentificationMessage computeAuthentificationMessage() { return new AuthentificationMessage(stringOne, stringTwo); } // login + password
+	private AuthentiticationMessage computeAuthentificationMessage() { return new AuthentiticationMessage(stringOne, stringTwo); } // login + password
+	private AnonymousAuthenticationMessage computeAnonymousAuthenticationMessage() {return new AnonymousAuthenticationMessage(stringOne);}
 	private ResponseAuthentification computeResponseAuthentificationMessage() { return new ResponseAuthentification(stringOne); }
 	private RequestPrivateConnection computeRequestPrivateConnectionMessage() { return new RequestPrivateConnection(stringOne, stringTwo); }
 	private ErrorPrivateConnection computeErrorPrivateConnectionMessage() { return new ErrorPrivateConnection(stringOne); } 
 	private RefusePrivateConnection computeRefusePrivateConnectionMessage() { return new RefusePrivateConnection(stringOne); } 
 	private AcceptPrivateConnection computeAcceptPrivateConnectionMessage() { return new AcceptPrivateConnection(stringOne, socketAddress, longOne); } 
-	private StringMessage computeStringMessage() {return new StringMessage(stringOne);}
 	private SendPrivateConnection computeSendPrivateConnectionMessage() {return new SendPrivateConnection(stringOne);}
 	
 	@Override
@@ -148,6 +148,7 @@ public class FrameReader implements Reader<PublicFrame> {
 			
 			switch (currentOpcode) {
 			case ChatHackProtocol.OPCODE_ASK_AUTH_WITH_PASSWORD : {
+				System.out.println("PM1");
 				currentFrameReader = authentificationReader;
 				break;
 			}
@@ -156,7 +157,7 @@ public class FrameReader implements Reader<PublicFrame> {
 				break;
 			}
 			case ChatHackProtocol.OPCODE_ASK_AUTH_WITHOUT_PASSWORD : {
-				currentFrameReader = stringMessageReader;
+				currentFrameReader = anonymousAuthenticationMessageReader;
 				break;
 			}
 			case ChatHackProtocol.OPCODE_RESPONSE_AUTH_WITHOUT_PASSWORD : {
@@ -241,7 +242,7 @@ public class FrameReader implements Reader<PublicFrame> {
 		acceptPrivateConnectionReader.reset();
 		refusePrivateConnectionReader.reset();
 		currentFrameReader.reset();
-		stringMessageReader.reset();
+		anonymousAuthenticationMessageReader.reset();
 		sendPrivateConnectionReader.reset();
 		frame = null;
 		stringOne = null;

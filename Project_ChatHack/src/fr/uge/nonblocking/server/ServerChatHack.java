@@ -17,14 +17,14 @@ import java.util.logging.Logger;
 import fr.uge.nonblocking.database.RequestAnonymousAuthentication;
 import fr.uge.nonblocking.database.RequestAuthenticationWithPassword;
 import fr.uge.nonblocking.frame.AcceptPrivateConnection;
-import fr.uge.nonblocking.frame.AuthentificationMessage;
+import fr.uge.nonblocking.frame.AuthentiticationMessage;
 import fr.uge.nonblocking.frame.DB;
 import fr.uge.nonblocking.frame.ErrorPrivateConnection;
 import fr.uge.nonblocking.frame.RefusePrivateConnection;
 import fr.uge.nonblocking.frame.RequestPrivateConnection;
 import fr.uge.nonblocking.frame.ResponseAuthentification;
 import fr.uge.nonblocking.frame.SendPrivateConnection;
-import fr.uge.nonblocking.frame.StringMessage;
+import fr.uge.nonblocking.frame.AnonymousAuthenticationMessage;
 import fr.uge.nonblocking.server.ServerContext.ConnectionTypes;
 import fr.uge.protocol.ChatHackProtocol;
 import fr.uge.protocol.ServerMDPProtococol;
@@ -147,7 +147,7 @@ public class ServerChatHack {
 		}
 	}
 
-	public void sendAuthentificationToDB(AuthentificationMessage auth, ServerContext context) {
+	public void sendAuthentificationToDB(AuthentiticationMessage auth, ServerContext context) {
 		if(!map.containsKey(auth.getLogin())) {
 			map.put(auth.getLogin(), context);
 			context.setConnectionTypeValidated();
@@ -159,11 +159,11 @@ public class ServerChatHack {
 		}
 	}
 
-	public void sendAnonymousAuthentificationToDB(StringMessage auth, ServerContext context) {
-		if(!map.containsKey(auth.getStringMessage())) {
-			map.put(auth.getStringMessage(), context);
+	public void sendAnonymousAuthentificationToDB(AnonymousAuthenticationMessage auth, ServerContext context) {
+		if(!map.containsKey(auth.getLogin())) {
+			map.put(auth.getLogin(), context);
 			context.setConnectionTypeAnonymous();
-			dbContext.queueMessage(new RequestAnonymousAuthentication(context.getId(), auth.getStringMessage()).asByteBuffer());			
+			dbContext.queueMessage(new RequestAnonymousAuthentication(context.getId(), auth.getLogin()).asByteBuffer());			
 		}
 		else {
 			context.queueMessage(new ResponseAuthentification("Login already in use").asByteBuffer());

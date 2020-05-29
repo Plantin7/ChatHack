@@ -22,7 +22,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import fr.uge.nonblocking.frame.AcceptPrivateConnection;
-import fr.uge.nonblocking.frame.AuthentificationMessage;
+import fr.uge.nonblocking.frame.AnonymousAuthenticationMessage;
+import fr.uge.nonblocking.frame.AuthentiticationMessage;
 import fr.uge.nonblocking.frame.ErrorPrivateConnection;
 import fr.uge.nonblocking.frame.PrivateFrame;
 import fr.uge.nonblocking.frame.PublicFrame;
@@ -47,11 +48,7 @@ public class ClientChatHack {
 	private final Selector selector;
 
 	private final Thread console;
-	private enum Command {SEND_PRIVATE_MESSAGE, 
-		SEND_PRIVATE_FILE, 
-		SEND_PUBLIC_MESSAGE, 
-		SEND_ACCEPT_PRIVATE_CONNECTION, 
-		SEND_REFUSE_PRIVATE_CONNECTION}
+	private enum Command {SEND_PRIVATE_MESSAGE, SEND_PRIVATE_FILE, SEND_PUBLIC_MESSAGE, SEND_ACCEPT_PRIVATE_CONNECTION, SEND_REFUSE_PRIVATE_CONNECTION}
 	private final ArrayBlockingQueue<Map<Command, String>> commandQueue = new ArrayBlockingQueue<>(10);
 	private ClientContext uniqueContext;
 	private final HashMap<String, String> myPendingRequest = new HashMap<>();
@@ -216,7 +213,13 @@ public class ClientChatHack {
 		var key = sc.register(selector, SelectionKey.OP_READ);
 		uniqueContext = new ClientContext(this, key);
 		key.attach(uniqueContext);
-		uniqueContext.queueMessage(new AuthentificationMessage(login, password).asByteBuffer());
+		
+		if(!password.isEmpty()) {
+			uniqueContext.queueMessage(new AuthentiticationMessage(login, password).asByteBuffer());
+		}
+		else {
+			uniqueContext.queueMessage(new AnonymousAuthenticationMessage(login).asByteBuffer());
+		}
 
 		// ------------ Server ------------------------- //
 		serverSocketChannel.bind(new InetSocketAddress(0));
