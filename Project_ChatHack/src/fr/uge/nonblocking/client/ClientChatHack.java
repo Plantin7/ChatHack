@@ -21,8 +21,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import fr.uge.nonblocking.client.context.ClientContext;
-import fr.uge.nonblocking.client.context.ClientPrivateContext;
 import fr.uge.nonblocking.frame.AcceptPrivateConnection;
 import fr.uge.nonblocking.frame.AuthentificationMessage;
 import fr.uge.nonblocking.frame.ErrorPrivateConnection;
@@ -32,8 +30,8 @@ import fr.uge.nonblocking.frame.PublicMessage;
 import fr.uge.nonblocking.frame.RefusePrivateConnection;
 import fr.uge.nonblocking.frame.RequestPrivateConnection;
 import fr.uge.nonblocking.frame.SendPrivateConnection;
-import fr.uge.nonblocking.server.context.DBContext;
-import fr.uge.nonblocking.server.context.ServerContext;
+import fr.uge.nonblocking.server.DBContext;
+import fr.uge.nonblocking.server.ServerContext;
 import fr.uge.protocol.ChatHackProtocol;
 
 public class ClientChatHack {

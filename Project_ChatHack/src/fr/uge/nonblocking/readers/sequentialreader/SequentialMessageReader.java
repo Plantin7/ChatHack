@@ -7,9 +7,6 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import fr.uge.nonblocking.builder.EmptyBuilder;
-import fr.uge.nonblocking.builder.FinishBuidler;
-import fr.uge.nonblocking.builder.PartBuilder;
 import fr.uge.nonblocking.readers.Reader;
 import fr.uge.nonblocking.readers.Reader.ProcessStatus;
 

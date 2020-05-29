@@ -1,11 +1,10 @@
-package fr.uge.nonblocking.readers.basicReader;
+package fr.uge.nonblocking.readers;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.logging.Logger;
 
-import fr.uge.nonblocking.readers.Reader;
 import fr.uge.nonblocking.readers.Reader.ProcessStatus;
 
 public class InetSocketAddressReader implements Reader<InetSocketAddress>{

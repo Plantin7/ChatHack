@@ -1,10 +1,8 @@
-package fr.uge.nonblocking.readers.complexReader;
+package fr.uge.nonblocking.readers;
 
 import java.nio.ByteBuffer;
 
 import fr.uge.nonblocking.frame.DB;
-import fr.uge.nonblocking.readers.Reader;
-import fr.uge.nonblocking.readers.basicReader.LongReader;
 
 public class DBReader implements Reader<DB>{
 	private enum State {DONE, WAITING_OP, WAITING_ID, ERROR}

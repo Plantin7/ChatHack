@@ -1,4 +1,4 @@
-package fr.uge.nonblocking.server.context;
+package fr.uge.nonblocking.server;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -9,10 +9,9 @@ import java.util.Queue;
 import java.util.logging.Logger;
 
 import fr.uge.nonblocking.frame.Frame;
-import fr.uge.nonblocking.visitors.ServerFrameVisitor;
+import fr.uge.nonblocking.readers.FrameReader;
 import fr.uge.nonblocking.readers.Reader;
-import fr.uge.nonblocking.readers.complexReader.FrameReader;
-import fr.uge.nonblocking.server.ServerChatHack;
+import fr.uge.nonblocking.visitors.ServerFrameVisitor;
 
 public class ServerContext {
 	public enum ConnectionTypes {CONNECTION_VALIDATED, CONNECTION_ANONYMOUS, CONNECTION_NONE}

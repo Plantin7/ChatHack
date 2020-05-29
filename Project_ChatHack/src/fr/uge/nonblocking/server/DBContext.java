@@ -1,4 +1,4 @@
-package fr.uge.nonblocking.server.context;
+package fr.uge.nonblocking.server;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -8,11 +8,10 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.logging.Logger;
 
-import fr.uge.nonblocking.client.context.ClientContext;
+import fr.uge.nonblocking.client.ClientContext;
 import fr.uge.nonblocking.frame.ResponseAuthentification;
+import fr.uge.nonblocking.readers.DBReader;
 import fr.uge.nonblocking.readers.Reader;
-import fr.uge.nonblocking.readers.complexReader.DBReader;
-import fr.uge.nonblocking.server.ServerChatHack;
 import fr.uge.protocol.ChatHackProtocol;
 
 public class DBContext {

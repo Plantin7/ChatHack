@@ -1,4 +1,4 @@
-package fr.uge.nonblocking.builder;
+package fr.uge.nonblocking.readers.sequentialreader;
 
 import java.util.function.Consumer;
 import java.util.function.Supplier;

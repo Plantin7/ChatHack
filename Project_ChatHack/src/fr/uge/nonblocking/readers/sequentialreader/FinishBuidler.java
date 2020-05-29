@@ -1,4 +1,4 @@
-package fr.uge.nonblocking.builder;
+package fr.uge.nonblocking.readers.sequentialreader;
 
 import fr.uge.nonblocking.readers.Reader;
 

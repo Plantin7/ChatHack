@@ -1,8 +1,7 @@
-package fr.uge.nonblocking.readers.basicReader;
+package fr.uge.nonblocking.readers;
 
 import java.nio.ByteBuffer;
 
-import fr.uge.nonblocking.readers.Reader;
 import fr.uge.nonblocking.readers.Reader.ProcessStatus;
 
 public class IntReader implements Reader<Integer> {

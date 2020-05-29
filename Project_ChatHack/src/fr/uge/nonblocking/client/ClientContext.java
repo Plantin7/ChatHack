@@ -1,4 +1,4 @@
-package fr.uge.nonblocking.client.context;
+package fr.uge.nonblocking.client;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -7,13 +7,11 @@ import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import fr.uge.nonblocking.client.ClientChatHack;
+import fr.uge.nonblocking.visitors.ClientFrameVisitor;
 import fr.uge.nonblocking.frame.Frame;
-import fr.uge.nonblocking.frame.PrivateMessage;
-import fr.uge.nonblocking.readers.complexReader.FrameReader;
-import fr.uge.nonblocking.visitors.PrivateClientFrameVisitor;
+import fr.uge.nonblocking.readers.FrameReader;
 
-public class ClientPrivateContext {
+public class ClientContext {
 	static private int BUFFER_SIZE = 10_000;
 
 	final private SelectionKey key;
@@ -22,14 +20,18 @@ public class ClientPrivateContext {
 	final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
 	final private Queue<ByteBuffer> queue = new LinkedList<>(); // buffers read-mode
 	final private FrameReader frameReader = new FrameReader();
-	private final PrivateClientFrameVisitor frameVisitor;
+	private final ClientFrameVisitor frameVisitor;
 
 	private boolean closed = false;
 
-	public ClientPrivateContext(ClientChatHack client, SelectionKey key) {
+	public ClientContext(ClientChatHack client, SelectionKey key) {
 		this.key = key;
 		this.sc = (SocketChannel) key.channel();
-		this.frameVisitor = new PrivateClientFrameVisitor(this, client);
+		this.frameVisitor = new ClientFrameVisitor(this, client);
+	}
+	
+	public boolean isClosed() {
+		return closed;
 	}
 
 	/**
@@ -115,6 +117,7 @@ public class ClientPrivateContext {
 	private void silentlyClose() {
 		try {
 			sc.close();
+			// client.closeSelector();
 		} catch (IOException e) {
 			// ignore exception
 		}
@@ -157,7 +160,6 @@ public class ClientPrivateContext {
 		if (!sc.finishConnect()) {
 			return;
 		}
-		queueMessage(new PrivateMessage("ToTo", "MPMPMPMP").asByteBuffer());
 		updateInterestOps();
 	}
 }

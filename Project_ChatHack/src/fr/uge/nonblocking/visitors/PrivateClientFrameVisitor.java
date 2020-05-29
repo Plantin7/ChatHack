@@ -1,7 +1,7 @@
 package fr.uge.nonblocking.visitors;
 
 import fr.uge.nonblocking.client.ClientChatHack;
-import fr.uge.nonblocking.client.context.ClientPrivateContext;
+import fr.uge.nonblocking.client.ClientPrivateContext;
 import fr.uge.nonblocking.frame.AcceptPrivateConnection;
 import fr.uge.nonblocking.frame.AuthentificationMessage;
 import fr.uge.nonblocking.frame.ErrorPrivateConnection;

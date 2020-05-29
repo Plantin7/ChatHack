@@ -23,10 +23,9 @@ import fr.uge.nonblocking.frame.RequestPrivateConnection;
 import fr.uge.nonblocking.frame.ResponseAuthentification;
 import fr.uge.nonblocking.frame.SendPrivateConnection;
 import fr.uge.nonblocking.frame.StringMessage;
-import fr.uge.nonblocking.server.context.DBContext;
-import fr.uge.nonblocking.server.context.ServerContext;
-import fr.uge.nonblocking.server.context.ServerContext.ConnectionTypes;
+import fr.uge.nonblocking.server.ServerContext.ConnectionTypes;
 import fr.uge.protocol.ChatHackProtocol;
+import fr.uge.protocol.ServerMDPProtococol;
 
 public class ServerChatHack {
 
@@ -154,7 +153,7 @@ public class ServerChatHack {
 			context.setConnectionTypeValidated();
 			var bbPassword = UTF8.encode(auth.getPassword());
 			var bb = ByteBuffer.allocate(Byte.BYTES + Long.BYTES + 2 * Integer.BYTES + bbLogin.limit() + bbPassword.limit());
-			bb.put(ChatHackProtocol.OPCODE_ASK_AUTH_TO_DB_WITH_PASWWORD).putLong(id).putInt(bbLogin.limit()).put(bbLogin).putInt(bbPassword.limit()).put(bbPassword).flip();
+			bb.put(ServerMDPProtococol.OPCODE_ASK_AUTH_TO_DB_WITH_PASWWORD).putLong(id).putInt(bbLogin.limit()).put(bbLogin).putInt(bbPassword.limit()).put(bbPassword).flip();
 			dbContext.queueMessage(bb);			
 		}
 		else {
@@ -170,7 +169,7 @@ public class ServerChatHack {
 			var bbLogin = UTF8.encode(auth.getStringMessage());
 			context.setConnectionTypeAnonymous();
 			var bb = ByteBuffer.allocate(Byte.BYTES + Long.BYTES + Integer.BYTES + bbLogin.limit());
-			bb.put(ChatHackProtocol.OPCODE_ASK_AUTH_TO_DB_WITHOUT_PASSWORD).putLong(id).putInt(bbLogin.limit()).put(bbLogin).flip();
+			bb.put(ServerMDPProtococol.OPCODE_ASK_AUTH_TO_DB_WITHOUT_PASSWORD).putLong(id).putInt(bbLogin.limit()).put(bbLogin).flip();
 			dbContext.queueMessage(bb);			
 		}
 		else {

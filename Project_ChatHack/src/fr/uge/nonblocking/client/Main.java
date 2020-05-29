@@ -5,9 +5,9 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 import fr.uge.nonblocking.frame.Frame;
+import fr.uge.nonblocking.readers.InetSocketAddressReader;
 import fr.uge.nonblocking.readers.Reader;
 import fr.uge.nonblocking.readers.Reader.ProcessStatus;
-import fr.uge.nonblocking.readers.basicReader.InetSocketAddressReader;
 import fr.uge.protocol.ChatHackProtocol;
 
 public class Main {

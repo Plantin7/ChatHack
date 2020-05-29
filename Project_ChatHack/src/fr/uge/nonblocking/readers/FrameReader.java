@@ -1,4 +1,4 @@
-package fr.uge.nonblocking.readers.complexReader;
+package fr.uge.nonblocking.readers;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -14,10 +14,6 @@ import fr.uge.nonblocking.frame.RequestPrivateConnection;
 import fr.uge.nonblocking.frame.ResponseAuthentification;
 import fr.uge.nonblocking.frame.SendPrivateConnection;
 import fr.uge.nonblocking.frame.StringMessage;
-import fr.uge.nonblocking.readers.Reader;
-import fr.uge.nonblocking.readers.basicReader.InetSocketAddressReader;
-import fr.uge.nonblocking.readers.basicReader.LongReader;
-import fr.uge.nonblocking.readers.basicReader.StringReader;
 import fr.uge.nonblocking.readers.sequentialreader.SequentialMessageReader;
 import fr.uge.protocol.ChatHackProtocol;
 
