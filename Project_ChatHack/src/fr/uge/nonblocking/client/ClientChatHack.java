@@ -217,7 +217,6 @@ public class ClientChatHack {
 		serverSocketChannel.bind(new InetSocketAddress(0));
 		serverSocketChannel.configureBlocking(false);
 		serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
-		// ------------ Server ------------------------- //
 
 		console.setDaemon(true);
 		console.start();
@@ -330,6 +329,26 @@ public class ClientChatHack {
 		System.out.println(UTF8.decode(bbResponse));
 	}
 
+	public static void main(String[] args) throws NumberFormatException, IOException {
+		if (args.length == 4) {
+			new ClientChatHack(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[2], args[3], "").launch();
+		}
+		else if(args.length == 5) {
+			new ClientChatHack(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[2], args[3], args[4]).launch();
+		}
+		else {
+			usage();
+			return;
+		}
+
+	}
+
+	private static void usage() {
+		System.out.println("Usage : ClientChatHack - hostname - port - path_file - login - (password)");
+	}
+	
+	//***************************************** MANAGE CLIENT VISITOR METHODS *********************************************//
+	
 	public void displayFrameDialog(PublicFrame frame) {
 		System.out.println(frame);
 	}
@@ -369,27 +388,5 @@ public class ClientChatHack {
 			//
 		}
 	}
-
-	public static void main(String[] args) throws NumberFormatException, IOException {
-		if (args.length == 4) {
-			new ClientChatHack(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[2], args[3], "").launch();
-		}
-		else if(args.length == 5) {
-			new ClientChatHack(new InetSocketAddress(args[0], Integer.parseInt(args[1])), args[2], args[3], args[4]).launch();
-		}
-		else {
-			usage();
-			return;
-		}
-
-	}
-
-	private static void usage() {
-		System.out.println("Usage : ClientChatHack - hostname - port - path_file - login - (password)");
-	}
+	
 }
-
-/*
- * Commande avec un objet !
- * 
- */

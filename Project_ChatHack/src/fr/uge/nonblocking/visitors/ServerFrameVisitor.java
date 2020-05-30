@@ -16,7 +16,7 @@ public class ServerFrameVisitor implements PublicFrameVisitor {
 
     @Override
     public void visit(PublicMessage publicMessage) {
-        server.broadcast(publicMessage.asByteBuffer());
+        server.broadcast(publicMessage.asByteBuffer(), ctx);
     }
 
     @Override

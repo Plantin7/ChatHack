@@ -4,7 +4,12 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.*;
+import java.nio.channels.Channel;
+import java.nio.channels.SelectableChannel;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -17,6 +22,7 @@ import java.util.logging.Logger;
 import fr.uge.nonblocking.database.RequestAnonymousAuthentication;
 import fr.uge.nonblocking.database.RequestAuthenticationWithPassword;
 import fr.uge.nonblocking.frame.AcceptPrivateConnection;
+import fr.uge.nonblocking.frame.AnonymousAuthenticationMessage;
 import fr.uge.nonblocking.frame.AuthentiticationMessage;
 import fr.uge.nonblocking.frame.DB;
 import fr.uge.nonblocking.frame.ErrorPrivateConnection;
@@ -24,10 +30,7 @@ import fr.uge.nonblocking.frame.RefusePrivateConnection;
 import fr.uge.nonblocking.frame.RequestPrivateConnection;
 import fr.uge.nonblocking.frame.ResponseAuthentification;
 import fr.uge.nonblocking.frame.SendPrivateConnection;
-import fr.uge.nonblocking.frame.AnonymousAuthenticationMessage;
 import fr.uge.nonblocking.server.ServerContext.ConnectionTypes;
-import fr.uge.protocol.ChatHackProtocol;
-import fr.uge.protocol.ServerMDPProtococol;
 
 public class ServerChatHack {
 
@@ -73,7 +76,7 @@ public class ServerChatHack {
 				throw tunneled.getCause();
 			}
 			System.out.println("Select finished");
-			
+
 		}
 	}
 
@@ -132,149 +135,6 @@ public class ServerChatHack {
 			// ignore exception
 		}
 	}
-
-	/**
-	 * Add a message to all connected clients queue
-	 *
-	 * @param msg
-	 */
-	public void broadcast(ByteBuffer msg) {
-		for (var key : selector.keys()) { 
-			if(key.isValid() && key != serverKey && key != dbContext.getKey()) { // On ne veut pas du server et du server db, on veut uniquement les clients
-				var context = (ServerContext)key.attachment();
-				context.queueMessage(msg.duplicate());
-			}
-		}
-	}
-
-	public void sendAuthentificationToDB(AuthentiticationMessage auth, ServerContext context) {
-		if(!map.containsKey(auth.getLogin())) {
-			map.put(auth.getLogin(), context);
-			context.setConnectionTypeValidated();
-			dbContext.queueMessage(new RequestAuthenticationWithPassword(context.getId(), auth.getLogin(), auth.getPassword()).asByteBuffer());			
-		}
-		else {
-			context.queueMessage(new ResponseAuthentification("Login already in use").asByteBuffer());
-			context.silentlyInputClose();
-		}
-	}
-
-	public void sendAnonymousAuthentificationToDB(AnonymousAuthenticationMessage auth, ServerContext context) {
-		if(!map.containsKey(auth.getLogin())) {
-			map.put(auth.getLogin(), context);
-			System.out.println("Context : " + map.size());
-			context.setConnectionTypeAnonymous();
-			dbContext.queueMessage(new RequestAnonymousAuthentication(context.getId(), auth.getLogin()).asByteBuffer());			
-		}
-		else {
-			context.queueMessage(new ResponseAuthentification("Login already in use").asByteBuffer());
-			context.silentlyInputClose();
-		}
-	}
-
-	public void sendToClientResponseOfDB(DB dbResponse) {
-		System.out.println("Context : " + map.size());
-		var clientContext = searchContextFromID(dbResponse.getId()).get();
-		var connectionType = clientContext.getConnectionTypes();
-		System.out.println("ConnnectionType " + connectionType);
-		ResponseAuthentification response;
-		if(connectionType == ConnectionTypes.CONNECTION_VALIDATED) {
-			if(dbResponse.getOpcode() == 1) {
-				response = new ResponseAuthentification("Connected");
-			}
-			else if (dbResponse.getOpcode() == 0) {
-				response = new ResponseAuthentification("Login or password incorrect !");
-				clientContext.silentlyInputClose();
-			}
-			else {
-				throw new IllegalStateException("The DB Server doesn't respect the protocol");
-			}
-		}
-		else if(connectionType == ConnectionTypes.CONNECTION_ANONYMOUS) {
-			if(dbResponse.getOpcode() == 1) { // Login dans la base de donnée
-				response = new ResponseAuthentification("You tried to connect with an already existing account");
-				clientContext.silentlyInputClose();
-			}
-			else if (dbResponse.getOpcode() == 0) {
-				response = new ResponseAuthentification("Connected (anonymous)");
-			}
-			else {
-				throw new IllegalStateException("The DB Server doesn't respect the protocol");
-			}
-		}
-		else {
-			throw new IllegalStateException("The DB Server doesn't respect the protocol");
-		}
-
-		clientContext.queueMessage(response.asByteBuffer()); //response.asByteBuffer()
-
-	}
-	
-	public void sendPrivateConnectionRequestToClient(RequestPrivateConnection requestPrivateConnection, ServerContext ctx) {
-		var loginDest = requestPrivateConnection.getLogin();
-		var contextDest = map.get(loginDest);
-		if(contextDest != null) {
-			var expeditor = getLoginFromId(ctx.getId()).get();
-			contextDest.queueMessage(new SendPrivateConnection(expeditor).asByteBuffer());
-		}
-		else {
-			ctx.queueMessage(new ErrorPrivateConnection(loginDest).asByteBuffer());
-		}
-	}
-	
-	public void sendRefuseRequestConnectionToClient(RefusePrivateConnection refusePrivateConnection, ServerContext ctx) {
-		var loginDest = refusePrivateConnection.getLogin();
-		var contextDest = map.get(loginDest);
-		if(contextDest != null) {
-			var login = getLoginFromId(ctx.getId()).get();
-			contextDest.queueMessage(new RefusePrivateConnection(login).asByteBuffer());
-		}
-		else {
-			System.out.println("RefuseConnection : ON NE DOIT PAS RENTRER ICI" );
-		}
-	}
-	
-	public void sendAcceptRequestConnectionToClient(AcceptPrivateConnection acceptPrivateConnection, ServerContext ctx) {
-		var loginDest = acceptPrivateConnection.getLogin();
-		var contextDest = map.get(loginDest);
-		if(contextDest != null) {
-			var expeditor = getLoginFromId(ctx.getId()).get();
-			var socketAddress = acceptPrivateConnection.getSocketAddress();
-			var connectId = acceptPrivateConnection.getConnectId();
-			contextDest.queueMessage(new AcceptPrivateConnection(expeditor, socketAddress, connectId).asByteBuffer());
-		}
-		else {
-			System.out.println("RefuseConnection : ON NE DOIT PAS RENTRER ICI" );
-		}
-	}
-
-	private Optional<ServerContext> searchContextFromID(long id) {
-		for(var entry : map.entrySet()){
-			var tmpId = map.get(entry.getKey()).getId();
-			if(tmpId == id) {
-				return Optional.of(map.get(entry.getKey()));
-			}
-		}
-		return Optional.empty();
-	}
-	
-	private Optional<String> getLoginFromId(long id){
-		for(var entry : map.entrySet()){
-			var tmpId = map.get(entry.getKey()).getId();
-			if(tmpId == id) {
-				return Optional.of(entry.getKey());
-			}
-		}
-		return Optional.empty();
-	}
-	
-	public void deleteElementFromId(long id){
-		var login = getLoginFromId(id);
-		if(login.isPresent()) {
-			map.remove(login.get());
-		}
-	}
-
 
 	public static void main(String[] args) throws NumberFormatException, IOException {
 		if (args.length != 3){
@@ -350,4 +210,168 @@ public class ServerChatHack {
 		if (key.isWritable()) list.add("WRITE");
 		return String.join(" and ",list);
 	}
+
+	//***************************************** MANAGE SERVER VISITOR METHODS *********************************************//
+
+	/**
+	 * Add a message to all connected clients queue
+	 *
+	 * @param msg
+	 */
+	public void broadcast(ByteBuffer msg, ServerContext ctx) {
+		if(!ctx.isConnected()) {
+			ctx.queueMessage(new ResponseAuthentification("You are not connected !").asByteBuffer());
+			ctx.silentlyClose();
+			return;
+		}
+		for (var key : selector.keys()) { 
+			if(key.isValid() && key != serverKey && key != dbContext.getKey()) { // On ne veut pas du server et du server db, on veut uniquement les clients
+				var context = (ServerContext)key.attachment();
+				context.queueMessage(msg.duplicate());
+			}
+		}
+	}
+
+	public void sendAuthentificationToDB(AuthentiticationMessage auth, ServerContext context) {
+		if(!map.containsKey(auth.getLogin())) {
+			map.put(auth.getLogin(), context);
+			context.setConnectionTypeValidated();
+			dbContext.queueMessage(new RequestAuthenticationWithPassword(context.getId(), auth.getLogin(), auth.getPassword()).asByteBuffer());			
+		}
+		else {
+			context.queueMessage(new ResponseAuthentification("Login already in use").asByteBuffer());
+			context.silentlyInputClose();
+		}
+	}
+
+	public void sendAnonymousAuthentificationToDB(AnonymousAuthenticationMessage auth, ServerContext context) {
+		if(!map.containsKey(auth.getLogin())) {
+			map.put(auth.getLogin(), context);
+			context.setConnectionTypeAnonymous();
+			dbContext.queueMessage(new RequestAnonymousAuthentication(context.getId(), auth.getLogin()).asByteBuffer());			
+		}
+		else {
+			context.queueMessage(new ResponseAuthentification("Login already in use").asByteBuffer());
+			context.silentlyInputClose();
+		}
+	}
+
+	public void sendToClientResponseOfDB(DB dbResponse) {
+		var clientContext = searchContextFromID(dbResponse.getId()).get();
+		var connectionType = clientContext.getConnectionTypes();
+		ResponseAuthentification response;
+		if(connectionType == ConnectionTypes.CONNECTION_VALIDATED) {
+			if(dbResponse.getOpcode() == 1) {
+				response = new ResponseAuthentification("Connected");
+				clientContext.setStatusConnection(true);
+			}
+			else if (dbResponse.getOpcode() == 0) {
+				response = new ResponseAuthentification("Login or password incorrect !");
+				clientContext.silentlyInputClose();
+			}
+			else {
+				throw new IllegalStateException("The DB Server doesn't respect the protocol");
+			}
+		}
+		else if(connectionType == ConnectionTypes.CONNECTION_ANONYMOUS) {
+			if(dbResponse.getOpcode() == 1) { // Login dans la base de donnée
+				response = new ResponseAuthentification("You tried to connect with an already existing account");
+				clientContext.silentlyInputClose();
+			}
+			else if (dbResponse.getOpcode() == 0) {
+				response = new ResponseAuthentification("Connected (anonymous)");
+				clientContext.setStatusConnection(true);
+			}
+			else {
+				throw new IllegalStateException("The DB Server doesn't respect the protocol");
+			}
+		}
+		else {
+			throw new IllegalStateException("The DB Server doesn't respect the protocol");
+		}
+
+		clientContext.queueMessage(response.asByteBuffer()); //response.asByteBuffer()
+
+	}
+
+	public void sendPrivateConnectionRequestToClient(RequestPrivateConnection requestPrivateConnection, ServerContext ctx) {
+		if(!ctx.isConnected()) {
+			ctx.queueMessage(new ResponseAuthentification("You are not connected !").asByteBuffer());
+			ctx.silentlyClose();
+			return;
+		}
+		var loginDest = requestPrivateConnection.getLogin();
+		var contextDest = map.get(loginDest);
+		if(contextDest != null) {
+			var expeditor = getLoginFromId(ctx.getId()).get();
+			contextDest.queueMessage(new SendPrivateConnection(expeditor).asByteBuffer());
+		}
+		else {
+			ctx.queueMessage(new ErrorPrivateConnection(loginDest).asByteBuffer());
+		}
+	}
+
+	public void sendRefuseRequestConnectionToClient(RefusePrivateConnection refusePrivateConnection, ServerContext ctx) {
+		if(!ctx.isConnected()) {
+			ctx.queueMessage(new ResponseAuthentification("You are not connected !").asByteBuffer());
+			ctx.silentlyClose();
+			return;
+		}
+		var loginDest = refusePrivateConnection.getLogin();
+		var contextDest = map.get(loginDest);
+		if(contextDest != null) {
+			var login = getLoginFromId(ctx.getId()).get();
+			contextDest.queueMessage(new RefusePrivateConnection(login).asByteBuffer());
+		}
+		else {
+			System.out.println("RefuseConnection : ON NE DOIT PAS RENTRER ICI" );
+		}
+	}
+
+	public void sendAcceptRequestConnectionToClient(AcceptPrivateConnection acceptPrivateConnection, ServerContext ctx) {
+		if(!ctx.isConnected()) {
+			ctx.queueMessage(new ResponseAuthentification("You are not connected !").asByteBuffer());
+			ctx.silentlyClose();
+			return;
+		}
+		var loginDest = acceptPrivateConnection.getLogin();
+		var contextDest = map.get(loginDest);
+		if(contextDest != null) {
+			var expeditor = getLoginFromId(ctx.getId()).get();
+			var socketAddress = acceptPrivateConnection.getSocketAddress();
+			var connectId = acceptPrivateConnection.getConnectId();
+			contextDest.queueMessage(new AcceptPrivateConnection(expeditor, socketAddress, connectId).asByteBuffer());
+		}
+		else {
+			System.out.println("RefuseConnection : ON NE DOIT PAS RENTRER ICI" );
+		}
+	}
+
+	private Optional<ServerContext> searchContextFromID(long id) {
+		for(var entry : map.entrySet()){
+			var tmpId = map.get(entry.getKey()).getId();
+			if(tmpId == id) {
+				return Optional.of(map.get(entry.getKey()));
+			}
+		}
+		return Optional.empty();
+	}
+
+	private Optional<String> getLoginFromId(long id){
+		for(var entry : map.entrySet()){
+			var tmpId = map.get(entry.getKey()).getId();
+			if(tmpId == id) {
+				return Optional.of(entry.getKey());
+			}
+		}
+		return Optional.empty();
+	}
+
+	public void deleteElementFromId(long id){
+		var login = getLoginFromId(id);
+		if(login.isPresent()) {
+			map.remove(login.get());
+		}
+	}
+
 }

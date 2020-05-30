@@ -15,6 +15,7 @@ import fr.uge.nonblocking.visitors.ServerFrameVisitor;
 
 public class ServerContext {
 	public enum ConnectionTypes {CONNECTION_VALIDATED, CONNECTION_ANONYMOUS, CONNECTION_NONE}
+	private boolean connected = false; 
 	static private int BUFFER_SIZE = 10_000;
 	static private Logger logger = Logger.getLogger(ServerContext.class.getName());
 
@@ -196,6 +197,14 @@ public class ServerContext {
 	
 	public ConnectionTypes getConnectionTypes() {
 		return connectionType;
+	}
+	
+	public void setStatusConnection(boolean isConnected) {
+		connected = isConnected;
+	}
+	
+	public boolean isConnected() {
+		return connected;
 	}
 
 }
