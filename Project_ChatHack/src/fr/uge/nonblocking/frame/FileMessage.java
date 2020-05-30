@@ -1,5 +1,6 @@
 package fr.uge.nonblocking.frame;
 
+import fr.uge.nonblocking.visitors.PrivateFrameVisitor;
 import fr.uge.nonblocking.visitors.PublicFrameVisitor;
 import fr.uge.protocol.ChatHackProtocol;
 
@@ -7,7 +8,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-public class FileMessage implements PublicFrame {
+public class FileMessage implements PrivateFrame {
 
     private final static Charset UTF8 = StandardCharsets.UTF_8;
     private String login;
@@ -46,7 +47,7 @@ public class FileMessage implements PublicFrame {
     }
 
     @Override
-    public void accept(PublicFrameVisitor visitor) {
-        // TODO to avoid merge conflit
+    public void accept(PrivateFrameVisitor visitor) {
     }
+
 }

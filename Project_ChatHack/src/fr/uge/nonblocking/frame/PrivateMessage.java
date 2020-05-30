@@ -2,15 +2,15 @@ package fr.uge.nonblocking.frame;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import fr.uge.nonblocking.visitors.PrivateFrameVisitor;
-import fr.uge.nonblocking.visitors.PublicFrameVisitor;
 import fr.uge.protocol.ChatHackProtocol;
 
-public class PrivateMessage implements PrivateFrame {
+public class PrivateMessage implements PrivateFrame{
 	private final String from;
 	private final String message;
-	private final static Charset UTF8 = Charset.forName("UTF-8");
+	private final static Charset UTF8 = StandardCharsets.UTF_8;
 	
 	public PrivateMessage(String from, String message) {
 		this.from = from;
@@ -35,5 +35,4 @@ public class PrivateMessage implements PrivateFrame {
 	public void accept(PrivateFrameVisitor visitor) {
 		visitor.visit(this);		
 	}
-
 }

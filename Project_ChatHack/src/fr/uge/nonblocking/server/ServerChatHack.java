@@ -369,9 +369,7 @@ public class ServerChatHack {
 
 	public void deleteElementFromId(long id){
 		var login = getLoginFromId(id);
-		if(login.isPresent()) {
-			map.remove(login.get());
-		}
+		login.ifPresent(map::remove);
 	}
 
 }
