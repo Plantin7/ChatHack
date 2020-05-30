@@ -8,6 +8,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 import fr.uge.nonblocking.frame.PublicFrame;
+import fr.uge.nonblocking.frame.ConfirmationPrivateConnection;
 import fr.uge.nonblocking.frame.PrivateFrame;
 import fr.uge.nonblocking.frame.PrivateMessage;
 import fr.uge.nonblocking.readers.FrameReader;
@@ -24,10 +25,13 @@ public class ClientPrivateContext {
 	final private Queue<ByteBuffer> queue = new LinkedList<>(); // buffers read-mode
 	final private PrivateFrameReader frameReader = new PrivateFrameReader();
 	private final PrivateClientFrameVisitor frameVisitor;
+	private final ClientChatHack client;
+	String privateLogin;
 
 	private boolean closed = false;
 
 	public ClientPrivateContext(ClientChatHack client, SelectionKey key) {
+		this.client = client;
 		this.key = key;
 		this.sc = (SocketChannel) key.channel();
 		this.frameVisitor = new PrivateClientFrameVisitor(this, client);
@@ -113,7 +117,7 @@ public class ClientPrivateContext {
 		key.interestOps(interesOps);
 	}
 
-	private void silentlyClose() {
+	public void silentlyClose() {
 		try {
 			sc.close();
 		} catch (IOException e) {
@@ -158,7 +162,8 @@ public class ClientPrivateContext {
 		if (!sc.finishConnect()) {
 			return;
 		}
-		queueMessage(new PrivateMessage("ToTo", "MPMPMPMP").asByteBuffer());
+		var pendingInfo = client.myPendingRequest.get(privateLogin);
+		queueMessage(new ConfirmationPrivateConnection(client.login, pendingInfo.connect_id).asByteBuffer());
 		updateInterestOps();
 	}
 }

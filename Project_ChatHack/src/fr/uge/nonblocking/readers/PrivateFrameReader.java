@@ -2,8 +2,10 @@ package fr.uge.nonblocking.readers;
 
 import java.nio.ByteBuffer;
 
+import fr.uge.nonblocking.frame.ConfirmationPrivateConnection;
 import fr.uge.nonblocking.frame.PrivateFrame;
 import fr.uge.nonblocking.frame.PrivateMessage;
+import fr.uge.nonblocking.frame.RequestConfirmationIsValid;
 import fr.uge.nonblocking.readers.sequentialreader.SequentialMessageReader;
 import fr.uge.protocol.ChatHackProtocol;
 
@@ -15,11 +17,11 @@ public class PrivateFrameReader implements Reader<PrivateFrame> {
 	
 	private final StringReader stringReader = new StringReader();
 	private final LongReader longReader = new LongReader();
-	private final InetSocketAddressReader socketAddressReader = new InetSocketAddressReader();
 	
 	private Reader<? extends PrivateFrame> currentFrameReader;
 	private String stringOne;
 	private String stringTwo;
+	private long longOne;
 	private PrivateFrame frame;
 	
 	private Reader<PrivateMessage> privateMessageReader = 
@@ -30,9 +32,27 @@ public class PrivateFrameReader implements Reader<PrivateFrame> {
 			.addValueRetriever(this::computePrivateMessage)
 			.build();
 	
+	private Reader<ConfirmationPrivateConnection> confirmationPrivateConnectionReader = 
+			SequentialMessageReader
+			.<ConfirmationPrivateConnection>create()
+			.addPart(stringReader, this::setStringOne)
+			.addPart(longReader, this::setLongOne)
+			.addValueRetriever(this::computeConfirmationPrivateConnection)
+			.build();
+	
+	private Reader<RequestConfirmationIsValid> requestConfirmationIsValidReader = 
+			SequentialMessageReader
+			.<RequestConfirmationIsValid>create()
+			.addPart(stringReader, this::setStringOne)
+			.addValueRetriever(this::computeRequestConfirmationIsValid)
+			.build();
+	
 	private void setStringOne(String string) { stringOne = string; }
 	private void setStringTwo(String string) { stringTwo = string; }
+	private void setLongOne(long longOne) { this.longOne = longOne;}
 	private PrivateMessage computePrivateMessage() { return new PrivateMessage(stringOne, stringTwo); } // Login + message
+	private ConfirmationPrivateConnection computeConfirmationPrivateConnection() { return new ConfirmationPrivateConnection(stringOne, longOne); }
+	private RequestConfirmationIsValid computeRequestConfirmationIsValid() { return new RequestConfirmationIsValid(stringOne); }
 	
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
@@ -56,6 +76,14 @@ public class PrivateFrameReader implements Reader<PrivateFrame> {
 			switch (currentOpcode) {
 			case ChatHackProtocol.OPCODE_SEND_PRIVATE_MESSAGE : {
 				currentFrameReader = privateMessageReader;
+				break;
+			}
+			case ChatHackProtocol.OPCODE_VERIF_CONNECT_ID_PRIVATE_CONNECTION : {
+				currentFrameReader = confirmationPrivateConnectionReader;
+				break;
+			}
+			case ChatHackProtocol.OPCODE_CONNECT_ID_PRIVATE_CONNECTION_IS_VALID : {
+				currentFrameReader = requestConfirmationIsValidReader;
 				break;
 			}
 			default:
@@ -106,6 +134,8 @@ public class PrivateFrameReader implements Reader<PrivateFrame> {
 		state = State.WAITING_OP;
 		currentFrameReader.reset();
 		privateMessageReader.reset();
+		stringOne = null;
+		stringTwo = null;
 		frame = null;
 		
 	}

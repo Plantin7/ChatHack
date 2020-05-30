@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -43,10 +44,11 @@ public class ServerChatHack {
 
 	/* -------------------------------- SERVER CHAT HACK ----------------------------------------*/
 	private final ServerSocketChannel serverSocketChannel;
-	private final HashMap<String, ServerContext> map = new HashMap<>();
 	private final Selector selector;
 	private SelectionKey serverKey;
 	private long id = 0;
+	
+	private final HashMap<String, ServerContext> map = new HashMap<>(); // register the clients connected 
 
 	public ServerChatHack(int port, InetSocketAddress serverDB) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
@@ -220,7 +222,6 @@ public class ServerChatHack {
 	 */
 	public void broadcast(ByteBuffer msg, ServerContext ctx) {
 		if(!ctx.isConnected()) {
-			ctx.queueMessage(new ResponseAuthentification("You are not connected !").asByteBuffer());
 			ctx.silentlyClose();
 			return;
 		}
@@ -296,7 +297,6 @@ public class ServerChatHack {
 
 	public void sendPrivateConnectionRequestToClient(RequestPrivateConnection requestPrivateConnection, ServerContext ctx) {
 		if(!ctx.isConnected()) {
-			ctx.queueMessage(new ResponseAuthentification("You are not connected !").asByteBuffer());
 			ctx.silentlyClose();
 			return;
 		}
@@ -330,7 +330,6 @@ public class ServerChatHack {
 
 	public void sendAcceptRequestConnectionToClient(AcceptPrivateConnection acceptPrivateConnection, ServerContext ctx) {
 		if(!ctx.isConnected()) {
-			ctx.queueMessage(new ResponseAuthentification("You are not connected !").asByteBuffer());
 			ctx.silentlyClose();
 			return;
 		}
