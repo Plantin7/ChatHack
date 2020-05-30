@@ -103,6 +103,9 @@ public class ClientPrivateContext {
 	 */
 
 	private void updateInterestOps() {
+		if(!key.isValid()) {
+			return;
+		}
 		var interesOps = 0;
 		if (!closed && bbin.hasRemaining()) {
 			interesOps = interesOps | SelectionKey.OP_READ;
@@ -165,6 +168,10 @@ public class ClientPrivateContext {
 		var pendingInfo = client.myPendingRequest.get(privateLogin);
 		queueMessage(new ConfirmationPrivateConnection(client.login, pendingInfo.connect_id).asByteBuffer());
 		updateInterestOps();
+	}
+	
+	public SelectionKey getKey() {
+		return key;
 	}
 }
 

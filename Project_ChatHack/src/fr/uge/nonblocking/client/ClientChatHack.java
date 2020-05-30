@@ -189,6 +189,15 @@ public class ClientChatHack implements CommandVisitor {
 				}
 				selector.select(this::treatKey);
 				processCommands();
+				for(var sKey : selector.keys()) {
+					if(!sKey.isValid()) {
+						myPendingRequest.entrySet()
+										.stream()
+										.filter(k -> k.getValue().privateContext.getKey().equals(sKey))
+										.findFirst()
+										.ifPresent(pending -> myPendingRequest.remove(pending.getKey()));
+					}
+				}
 			} catch (UncheckedIOException tunneled) {
 				throw tunneled.getCause();
 			}
