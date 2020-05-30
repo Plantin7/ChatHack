@@ -53,13 +53,6 @@ public class FrameReader implements Reader<PublicFrame> {
 			.addValueRetriever(this::computeAuthentificationMessage)
 			.build();
 	
-	private Reader<ResponseAuthentification> responseAuthentificationReader =
-			SequentialMessageReader
-			.<ResponseAuthentification>create()
-			.addPart(stringReader, this::setStringOne)
-			.addValueRetriever(this::computeResponseAuthentificationMessage)
-			.build();
-	
 	private Reader<RequestPrivateConnection> requestPrivateConnectionReader =
 			SequentialMessageReader
 			.<RequestPrivateConnection>create()
@@ -120,7 +113,6 @@ public class FrameReader implements Reader<PublicFrame> {
 	private PublicMessage computePublicMessage() { return new PublicMessage(stringOne, stringTwo); } // Login + message
 	private AuthentiticationMessage computeAuthentificationMessage() { return new AuthentiticationMessage(stringOne, stringTwo); } // login + password
 	private AnonymousAuthenticationMessage computeAnonymousAuthenticationMessage() {return new AnonymousAuthenticationMessage(stringOne);}
-	private ResponseAuthentification computeResponseAuthentificationMessage() { return new ResponseAuthentification(stringOne); }
 	private RequestPrivateConnection computeRequestPrivateConnectionMessage() { return new RequestPrivateConnection(stringOne, stringTwo); }
 	private ErrorPrivateConnection computeErrorPrivateConnectionMessage() { return new ErrorPrivateConnection(stringOne); } 
 	private RefusePrivateConnection computeRefusePrivateConnectionMessage() { return new RefusePrivateConnection(stringOne); } 
@@ -152,16 +144,8 @@ public class FrameReader implements Reader<PublicFrame> {
 				currentFrameReader = authentificationReader;
 				break;
 			}
-			case ChatHackProtocol.OPCODE_RESPONSE_AUTH_WITH_PASSWORD : {
-				currentFrameReader = responseAuthentificationReader;
-				break;
-			}
 			case ChatHackProtocol.OPCODE_ASK_AUTH_WITHOUT_PASSWORD : {
 				currentFrameReader = anonymousAuthenticationMessageReader;
-				break;
-			}
-			case ChatHackProtocol.OPCODE_RESPONSE_AUTH_WITHOUT_PASSWORD : {
-				currentFrameReader = responseAuthentificationReader;
 				break;
 			}
 			case ChatHackProtocol.OPCODE_PUBLIC_MESSAGE: {
@@ -236,7 +220,6 @@ public class FrameReader implements Reader<PublicFrame> {
 		state = State.WAITING_OP;
 		publicMessageReader.reset();
 		authentificationReader.reset();
-		responseAuthentificationReader.reset();
 		requestPrivateConnectionReader.reset();
 		errorPrivateConnectionReader.reset();
 		acceptPrivateConnectionReader.reset();

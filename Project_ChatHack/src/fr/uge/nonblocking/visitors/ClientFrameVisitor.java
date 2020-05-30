@@ -24,11 +24,6 @@ public class ClientFrameVisitor implements PublicFrameVisitor {
     }
 
 	@Override
-	public void visit(ResponseAuthentification responseAuthentification) {
-		clientChatHack.displayFrameDialog(responseAuthentification);
-	}
-
-	@Override
 	public void visit(AnonymousAuthenticationMessage stringMessage) {
 		System.out.println("ServerFrameVisitor : TU NE DOIS PAS RENTRER ICI !");
 	}

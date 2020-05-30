@@ -3,6 +3,7 @@ package fr.uge.nonblocking.client;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.nio.channels.SelectionKey;
@@ -27,14 +28,10 @@ import fr.uge.nonblocking.frame.AuthentiticationMessage;
 import fr.uge.nonblocking.frame.ErrorPrivateConnection;
 import fr.uge.nonblocking.frame.PrivateFrame;
 import fr.uge.nonblocking.frame.PublicFrame;
-import fr.uge.nonblocking.frame.PrivateMessage;
 import fr.uge.nonblocking.frame.PublicMessage;
 import fr.uge.nonblocking.frame.RefusePrivateConnection;
 import fr.uge.nonblocking.frame.RequestPrivateConnection;
 import fr.uge.nonblocking.frame.SendPrivateConnection;
-import fr.uge.nonblocking.server.DBContext;
-import fr.uge.nonblocking.server.ServerContext;
-import fr.uge.protocol.ChatHackProtocol;
 
 public class ClientChatHack {
 
@@ -42,7 +39,7 @@ public class ClientChatHack {
 	private final ServerSocketChannel serverSocketChannel;
 
 	static private Logger logger = Logger.getLogger(ClientChatHack.class.getName());
-
+	private static Charset UTF8 = StandardCharsets.UTF_8;
 
 	private final SocketChannel sc;
 	private final Selector selector;
@@ -196,30 +193,25 @@ public class ClientChatHack {
 			}
 		}
 	}
-	
+
 	private long generateConnectId() {
 		return new Random().nextLong();
 	} 
 
 	public void launch() throws IOException {
-		/*sc.configureBlocking(false);
-		var key = sc.register(selector, SelectionKey.OP_CONNECT);
-		uniqueContext = new ClientContext(this, key);
-		key.attach(uniqueContext);
-		sc.connect(serverAddress);*/
-
-		sc.connect(serverAddress);
+		sc.connect(serverAddress); // Blocking Mode
+		// Waiting the response of authentication
+		if(!password.isEmpty()) {
+			getAuthenticationResponse(new AuthentiticationMessage(login, password), serverAddress);
+		}
+		else {
+			getAuthenticationResponse(new AnonymousAuthenticationMessage(login), serverAddress);
+		}
+		// configure the client to Non Blocking Mode
 		sc.configureBlocking(false);
 		var key = sc.register(selector, SelectionKey.OP_READ);
 		uniqueContext = new ClientContext(this, key);
 		key.attach(uniqueContext);
-		
-		if(!password.isEmpty()) {
-			uniqueContext.queueMessage(new AuthentiticationMessage(login, password).asByteBuffer());
-		}
-		else {
-			uniqueContext.queueMessage(new AnonymousAuthenticationMessage(login).asByteBuffer());
-		}
 
 		// ------------ Server ------------------------- //
 		serverSocketChannel.bind(new InetSocketAddress(0));
@@ -243,7 +235,7 @@ public class ClientChatHack {
 			}
 		}
 	}
-	
+
 
 	private void treatKey(SelectionKey key) {
 		try {
@@ -284,7 +276,7 @@ public class ClientChatHack {
 			silentlyClose(key);
 		}
 	}
-	
+
 	private void doAccept(SelectionKey key) throws IOException {
 		var sc = serverSocketChannel.accept();
 		if(sc == null) {
@@ -295,7 +287,7 @@ public class ClientChatHack {
 		var context = new ClientPrivateContext(this, client);
 		client.attach(context);
 	}
-	
+
 	private void silentlyClose(SelectionKey key) {
 		Channel sc = (Channel) key.channel();
 		try {
@@ -304,7 +296,7 @@ public class ClientChatHack {
 			// ignore exception
 		}
 	}
-	
+
 	/**
 	 * Fill the workspace of the Bytebuffer with bytes read from sc.
 	 *
@@ -322,10 +314,26 @@ public class ClientChatHack {
 		return true;
 	}
 
+	private void getAuthenticationResponse(PublicFrame request, SocketAddress server) throws IOException {
+		var bbToSend = request.asByteBuffer();
+		sc.write(bbToSend);
+		
+		var bbResponseSize = ByteBuffer.allocate(Integer.BYTES);
+		if(!readFully(sc, bbResponseSize)) {
+			return;
+		}
+		var bbResponse = ByteBuffer.allocate(bbResponseSize.flip().getInt());
+		if(!readFully(sc, bbResponse)) {
+			return;
+		}
+		bbResponse.flip();
+		System.out.println(UTF8.decode(bbResponse));
+	}
+
 	public void displayFrameDialog(PublicFrame frame) {
 		System.out.println(frame);
 	}
-	
+
 	public void displayFrameDialog(PrivateFrame privateMessage) {
 		System.out.println(privateMessage);
 	}
@@ -348,7 +356,7 @@ public class ClientChatHack {
 	public void manageAcceptPrivateConnection(AcceptPrivateConnection acceptPrivateConnection) {
 		displayFrameDialog(acceptPrivateConnection);
 		var message = myPendingRequest.remove(acceptPrivateConnection.getLogin());
-		
+
 		try {
 			var sc = SocketChannel.open();
 			sc.configureBlocking(false);

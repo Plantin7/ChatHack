@@ -162,6 +162,7 @@ public class ServerChatHack {
 	public void sendAnonymousAuthentificationToDB(AnonymousAuthenticationMessage auth, ServerContext context) {
 		if(!map.containsKey(auth.getLogin())) {
 			map.put(auth.getLogin(), context);
+			System.out.println("Context : " + map.size());
 			context.setConnectionTypeAnonymous();
 			dbContext.queueMessage(new RequestAnonymousAuthentication(context.getId(), auth.getLogin()).asByteBuffer());			
 		}
@@ -172,6 +173,7 @@ public class ServerChatHack {
 	}
 
 	public void sendToClientResponseOfDB(DB dbResponse) {
+		System.out.println("Context : " + map.size());
 		var clientContext = searchContextFromID(dbResponse.getId()).get();
 		var connectionType = clientContext.getConnectionTypes();
 		System.out.println("ConnnectionType " + connectionType);
@@ -204,7 +206,7 @@ public class ServerChatHack {
 			throw new IllegalStateException("The DB Server doesn't respect the protocol");
 		}
 
-		clientContext.queueMessage(response.asByteBuffer());
+		clientContext.queueMessage(response.asByteBuffer()); //response.asByteBuffer()
 
 	}
 	
@@ -213,7 +215,7 @@ public class ServerChatHack {
 		var contextDest = map.get(loginDest);
 		if(contextDest != null) {
 			var expeditor = getLoginFromId(ctx.getId()).get();
-			contextDest.queueMessage(new SendPrivateConnection(expeditor).asByteBuffer()); // TODO Create New Object
+			contextDest.queueMessage(new SendPrivateConnection(expeditor).asByteBuffer());
 		}
 		else {
 			ctx.queueMessage(new ErrorPrivateConnection(loginDest).asByteBuffer());

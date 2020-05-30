@@ -23,12 +23,7 @@ public class ServerFrameVisitor implements PublicFrameVisitor {
     public void visit(AuthentiticationMessage authentificationMessage) {
         server.sendAuthentificationToDB(authentificationMessage, ctx);
     }
-
-	@Override
-	public void visit(ResponseAuthentification responseAuthentification) {
-		System.out.println("ServerFrameVisitor : TU NE DOIS PAS RENTRER ICI !");
-	}
-
+    
 	@Override
 	public void visit(AnonymousAuthenticationMessage anonymousAuthenticationMessage) {
 		server.sendAnonymousAuthentificationToDB(anonymousAuthenticationMessage, ctx);
