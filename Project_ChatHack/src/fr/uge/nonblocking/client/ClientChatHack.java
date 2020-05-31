@@ -90,6 +90,10 @@ public class ClientChatHack implements CommandVisitor {
 					var caractere = line.charAt(0);
 					switch (caractere) {
 					case '@': {
+						if(line.split(" ", 2).length != 2) {
+							System.out.println("Bad Command or Missing arugments !");
+							break;
+						}
 						var privateRequest = line.substring(1).split(" ", 2);
 						var lineLogin = privateRequest[0];
 						if (!login.equals(lineLogin)) {
@@ -103,7 +107,12 @@ public class ClientChatHack implements CommandVisitor {
 					case '/': {
 						var accept = line.startsWith("/accept");
 						var refuse = line.startsWith("/refuse");
-						var loginToManage = line.split(" ", 2)[1]; // bug si pas de message !
+						if(line.split(" ", 2).length != 2) {
+							System.out.println("Bad Command or Missing arugments !");
+							break;
+						}
+						var loginToManage = line.split(" ", 2)[1];
+						
 						if (accept && checkValidRequest(loginToManage)) {
 							sendCommand(new AcceptPrivateConnectionCommand(loginToManage));
 						} 
@@ -114,7 +123,14 @@ public class ClientChatHack implements CommandVisitor {
 							var privateRequestFile = line.substring(1).split(" ", 2);
 							var lineLogin = privateRequestFile[0];
 							var fileName = privateRequestFile[1];
-							var bbFileData = readFile(Path.of(fileName));
+							ByteBuffer bbFileData;
+							try {
+								bbFileData = readFile(Path.of(fileName));
+							}
+							catch (IOException e) {
+								System.out.println("File doesn't exist !");
+								break;
+							}
 							if (!login.equals(lineLogin)) {
 								var privateMessageCommandFile = new FileMessageCommand(lineLogin, fileName, bbFileData);
 								sendCommand(privateMessageCommandFile);
@@ -137,9 +153,7 @@ public class ClientChatHack implements CommandVisitor {
 			}
 		} catch (InterruptedException e) {
 			logger.info("Console thread has been interrupted");
-		} catch (IOException e) {
-			logger.info("The file doesn't exsit !");
-		} finally {
+		}finally {
 			logger.info("Console thread stopping");
 		}
 	}
