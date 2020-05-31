@@ -80,13 +80,16 @@ public class ClientPrivateContext {
 	 * Try to fill bbout from the message queue
 	 */
 	private void processOut() {
-		while (!queue.isEmpty()) {
+		while (!queue.isEmpty() && bbout.hasRemaining()) {
 			var bb = queue.peek();
 			if (bb.remaining() <= bbout.remaining()) {
 				queue.remove();
 				bbout.put(bb);
 			} else {
-				return;
+                var oldLimit = bb.limit();
+                bb.limit(bb.position() + bbout.remaining());
+                bbout.put(bb);
+                bb.limit(oldLimit);
 			}
 		}
 	}

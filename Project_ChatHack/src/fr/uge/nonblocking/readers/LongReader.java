@@ -2,8 +2,6 @@ package fr.uge.nonblocking.readers;
 
 import java.nio.ByteBuffer;
 
-import fr.uge.nonblocking.readers.Reader.ProcessStatus;
-
 public class LongReader implements Reader<Long> {
 
     private enum State {DONE,WAITING,ERROR};

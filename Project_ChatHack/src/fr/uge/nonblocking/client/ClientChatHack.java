@@ -1,5 +1,6 @@
 package fr.uge.nonblocking.client;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
@@ -12,9 +13,10 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -22,10 +24,27 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import fr.uge.nonblocking.client.PendingRequestInfo.State;
-import fr.uge.nonblocking.client.commands.*;
-import fr.uge.nonblocking.client.commands.PublicMessageCommand;
-import fr.uge.nonblocking.frame.*;
+import fr.uge.nonblocking.client.commands.AcceptPrivateConnectionCommand;
 import fr.uge.nonblocking.client.commands.CommandVisitor;
+import fr.uge.nonblocking.client.commands.Commands;
+import fr.uge.nonblocking.client.commands.FileMessageCommand;
+import fr.uge.nonblocking.client.commands.PrivateMessageCommand;
+import fr.uge.nonblocking.client.commands.PublicMessageCommand;
+import fr.uge.nonblocking.client.commands.RefusePrivateConnectionCommand;
+import fr.uge.nonblocking.frame.AcceptPrivateConnection;
+import fr.uge.nonblocking.frame.AnonymousAuthenticationMessage;
+import fr.uge.nonblocking.frame.AuthentiticationMessage;
+import fr.uge.nonblocking.frame.ConfirmationPrivateConnection;
+import fr.uge.nonblocking.frame.ErrorPrivateConnection;
+import fr.uge.nonblocking.frame.FileMessage;
+import fr.uge.nonblocking.frame.PrivateFrame;
+import fr.uge.nonblocking.frame.PrivateMessage;
+import fr.uge.nonblocking.frame.PublicFrame;
+import fr.uge.nonblocking.frame.PublicMessage;
+import fr.uge.nonblocking.frame.RefusePrivateConnection;
+import fr.uge.nonblocking.frame.RequestConfirmationIsValid;
+import fr.uge.nonblocking.frame.RequestPrivateConnection;
+import fr.uge.nonblocking.frame.SendPrivateConnection;
 
 public class ClientChatHack implements CommandVisitor {
 
@@ -42,24 +61,25 @@ public class ClientChatHack implements CommandVisitor {
 
 	private final ArrayBlockingQueue<Commands> commandArrayBlockingQueue = new ArrayBlockingQueue<>(10);
 	private ClientContext uniqueContext;
-	final HashMap<String, PendingRequestInfo> myPendingRequest = new HashMap<>(); // Mes Demandes
-	private final ArrayList<String> clientAwaitingResponse = new ArrayList<>(); // Les demandes des autres
+	final HashMap<String, PendingRequestInfo> myPendingRequest = new HashMap<>();
+	private final ArrayList<String> clientAwaitingResponse = new ArrayList<>();
 
 	// params clientChatHack
 	private final InetSocketAddress serverAddress;
 	final String login;
-	private final String pathRepository;
+	private final Path pathRepository;
 	private final String password;
 
 	public ClientChatHack(InetSocketAddress serverAddress, String pathRepository, String login, String password) throws IOException {
 		this.serverAddress = serverAddress;
 		this.login = login;
-		this.pathRepository = pathRepository;
+		this.pathRepository = Path.of(pathRepository);
 		this.password = password;
 		this.sc = SocketChannel.open();
 		this.selector = Selector.open();
 		this.console = new Thread(this::consoleRun);
 		this.serverSocketChannel = ServerSocketChannel.open();
+		checkExistingFolder(this.pathRepository);
 	}
 
 	private void consoleRun() {
@@ -69,7 +89,7 @@ public class ClientChatHack implements CommandVisitor {
 				if (!line.isEmpty()) {
 					var caractere = line.charAt(0);
 					switch (caractere) {
-					case '@':
+					case '@': {
 						var privateRequest = line.substring(1).split(" ", 2);
 						var lineLogin = privateRequest[0];
 						if (!login.equals(lineLogin)) {
@@ -78,20 +98,32 @@ public class ClientChatHack implements CommandVisitor {
 						} else {
 							System.out.println("Vous essayé de vous parler à vous meme, bizzare");
 						}
-
 						break;
-					case '/':
+					}
+					case '/': {
 						var accept = line.startsWith("/accept");
 						var refuse = line.startsWith("/refuse");
-						var login = line.split(" ", 2)[1]; // bug si pas de message !
-						if (accept && checkValidRequest(login)) {
-							sendCommand(new AcceptPrivateConnectionCommand(login));
-						} else if (refuse && checkValidRequest(login)) {
-							sendCommand(new RefusePrivateConnectionCommand(login));
-						} else {
-							//System.out.println("TODO Implement private file");
+						var loginToManage = line.split(" ", 2)[1]; // bug si pas de message !
+						if (accept && checkValidRequest(loginToManage)) {
+							sendCommand(new AcceptPrivateConnectionCommand(loginToManage));
+						} 
+						else if (refuse && checkValidRequest(loginToManage)) {
+							sendCommand(new RefusePrivateConnectionCommand(loginToManage));
+						} 
+						else {
+							var privateRequestFile = line.substring(1).split(" ", 2);
+							var lineLogin = privateRequestFile[0];
+							var fileName = privateRequestFile[1];
+							var bbFileData = readFile(Path.of(fileName));
+							if (!login.equals(lineLogin)) {
+								var privateMessageCommandFile = new FileMessageCommand(lineLogin, fileName, bbFileData);
+								sendCommand(privateMessageCommandFile);
+							} else {
+								System.out.println("Vous essayé de vous envoyer un file ? ...bizzare");
+							}
 						}
 						break;
+					}
 					case '!': {
 						// DebugMode
 						System.out.println("Mes demandes en attente : " + myPendingRequest);
@@ -105,8 +137,23 @@ public class ClientChatHack implements CommandVisitor {
 			}
 		} catch (InterruptedException e) {
 			logger.info("Console thread has been interrupted");
+		} catch (IOException e) {
+			logger.info("The file doesn't exsit !");
 		} finally {
 			logger.info("Console thread stopping");
+		}
+	}
+
+	private ByteBuffer readFile(Path file) throws IOException {
+		var bbFile = Files.readAllBytes(file);
+		var bb = ByteBuffer.allocate(bbFile.length);
+		bb.put(bbFile);
+		return bb;
+	}
+
+	private void createFile(String fileName, ByteBuffer bbFileData) throws IOException {
+		try (FileOutputStream fos = new FileOutputStream(pathRepository.toString() + "/" + fileName)) {
+			fos.write(bbFileData.array());
 		}
 	}
 
@@ -118,6 +165,13 @@ public class ClientChatHack implements CommandVisitor {
 		return false;
 	}
 
+	private void checkExistingFolder(Path path) {
+		if(!Files.exists(path)) {
+			System.out.println("Directory unreachable !");
+			System.exit(1);
+		}
+	}
+
 
 	/**
 	 * Send a command to the selector via commandQueue and wake it up
@@ -126,17 +180,10 @@ public class ClientChatHack implements CommandVisitor {
 	 * @throws InterruptedException
 	 */
 	private void sendCommand(Commands cmd) throws InterruptedException {
-		/*
-		synchronized (commandQueue) {
-			commandQueue.put(cmd);
-			selector.wakeup();
-		}
-		 */
 		synchronized (commandArrayBlockingQueue) {
 			commandArrayBlockingQueue.put(cmd);
 			selector.wakeup();
 		}
-
 	}
 
 	/**
@@ -192,10 +239,10 @@ public class ClientChatHack implements CommandVisitor {
 				for(var sKey : selector.keys()) {
 					if(!sKey.isValid()) {
 						myPendingRequest.entrySet()
-										.stream()
-										.filter(k -> k.getValue().privateContext.getKey().equals(sKey))
-										.findFirst()
-										.ifPresent(pending -> myPendingRequest.remove(pending.getKey()));
+						.stream()
+						.filter(k -> k.getValue().privateContext.getKey().equals(sKey))
+						.findFirst()
+						.ifPresent(pending -> myPendingRequest.remove(pending.getKey()));
 					}
 				}
 			} catch (UncheckedIOException tunneled) {
@@ -388,6 +435,14 @@ public class ClientChatHack implements CommandVisitor {
 		pendingInfo.clearPendingMessage();
 	}
 
+	public void receiveFile(FileMessage fileMessage) {
+		try {
+			createFile(fileMessage.getFileName(), fileMessage.getBbFileData());
+		} catch (IOException e) {
+			throw new IllegalStateException("Repository Not fonded !");
+		}
+	}
+
 
 	//***************************************** MANAGE CLIENT COMMANDS VISITOR  *********************************************//
 
@@ -407,22 +462,23 @@ public class ClientChatHack implements CommandVisitor {
 			requestInfo.add(new PrivateMessage(this.login, message).asByteBuffer());
 			myPendingRequest.put(requestLogin, requestInfo);
 
-			uniqueContext.queueMessage(new RequestPrivateConnection(requestLogin, message).asByteBuffer());
+			uniqueContext.queueMessage(new RequestPrivateConnection(requestLogin).asByteBuffer());
 		} else {
-			checkPendingState(myPendingRequest.get(requestLogin).state, requestLogin, privateRequest[1]);
+			var privateMessage = new PrivateMessage(login, privateRequest[1]);
+			checkPendingState(myPendingRequest.get(requestLogin).state, requestLogin, privateMessage);
 		}
 	}
 
-	private void checkPendingState(State pendingState, String requestLogin, String message) {
+	private void checkPendingState(State pendingState, String requestLogin, PrivateFrame message) {
 		switch (pendingState) {
 		case REQUEST_DONE: {
 			var privateContext = myPendingRequest.get(requestLogin).privateContext;
-			privateContext.queueMessage(new PrivateMessage(login, message).asByteBuffer());
+			privateContext.queueMessage(message.asByteBuffer());
 			break;
 		}
 		case REQUEST_PENDING : {
 			var info = myPendingRequest.get(requestLogin);
-			info.add(new PrivateMessage(this.login, message).asByteBuffer());
+			info.add(message.asByteBuffer());
 			System.out.println("Le client " + "\"" + requestLogin + "\"" + " n'a pas encore répondu à votre demande !");
 			break;
 		}
@@ -433,12 +489,24 @@ public class ClientChatHack implements CommandVisitor {
 		default:
 			throw new IllegalArgumentException("Unexpected value: " + pendingState);
 		}
-
 	}
 
 	@Override
 	public void visit(FileMessageCommand fileMessage) {
-		System.out.println("visit FileMessageCommand");
+		var requestLogin = fileMessage.getLogin();
+		if (!myPendingRequest.containsKey(requestLogin)) {
+			var fileName = fileMessage.getFileName();
+			var bbFileData = fileMessage.getBbFileData();
+
+			var requestInfo = new PendingRequestInfo();
+			requestInfo.add(new FileMessage(this.login, fileName, bbFileData).asByteBuffer());
+			myPendingRequest.put(requestLogin, requestInfo);
+
+			uniqueContext.queueMessage(new RequestPrivateConnection(requestLogin).asByteBuffer());
+		} else {
+			var message = new FileMessage(login, fileMessage.getFileName(), fileMessage.getBbFileData());
+			checkPendingState(myPendingRequest.get(requestLogin).state, requestLogin, message);
+		}
 	}
 
 	@Override

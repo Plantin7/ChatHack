@@ -15,11 +15,6 @@ public class PendingRequestInfo {
 	
 	public PendingRequestInfo() {}
 	
-//	public PendingRequestInfo(ClientPrivateContext privateContext, long connect_id) {
-//		this.connect_id = connect_id;
-//		this.privateContext = privateContext;
-//	}
-	
 	public void add(ByteBuffer message) {
 		pendingMessage.add(message);
 	}

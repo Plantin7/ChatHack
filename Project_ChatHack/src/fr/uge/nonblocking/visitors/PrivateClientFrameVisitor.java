@@ -6,6 +6,7 @@ import fr.uge.nonblocking.frame.AcceptPrivateConnection;
 import fr.uge.nonblocking.frame.AuthentiticationMessage;
 import fr.uge.nonblocking.frame.ConfirmationPrivateConnection;
 import fr.uge.nonblocking.frame.ErrorPrivateConnection;
+import fr.uge.nonblocking.frame.FileMessage;
 import fr.uge.nonblocking.frame.PrivateMessage;
 import fr.uge.nonblocking.frame.PublicMessage;
 import fr.uge.nonblocking.frame.RefusePrivateConnection;
@@ -34,5 +35,10 @@ public class PrivateClientFrameVisitor implements PrivateFrameVisitor {
 	@Override
 	public void visit(RequestConfirmationIsValid requestConfirmationIsValid) {
 		clientChatHack.receivedValidationOfConfirmation(requestConfirmationIsValid, ctx);
+	}
+	@Override
+	public void visit(FileMessage fileMessage) {
+		System.out.println("File Received !");
+		clientChatHack.receiveFile(fileMessage);
 	}
 }

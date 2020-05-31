@@ -1,8 +1,10 @@
 package fr.uge.nonblocking.readers;
 
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 
 import fr.uge.nonblocking.frame.ConfirmationPrivateConnection;
+import fr.uge.nonblocking.frame.FileMessage;
 import fr.uge.nonblocking.frame.PrivateFrame;
 import fr.uge.nonblocking.frame.PrivateMessage;
 import fr.uge.nonblocking.frame.RequestConfirmationIsValid;
@@ -15,10 +17,12 @@ public class PrivateFrameReader implements Reader<PrivateFrame> {
 
 	private State state = State.WAITING_OP;
 	
+	private final ByteBufferReader byteBufferReader = new ByteBufferReader();
 	private final StringReader stringReader = new StringReader();
 	private final LongReader longReader = new LongReader();
 	
 	private Reader<? extends PrivateFrame> currentFrameReader;
+	private ByteBuffer bbOne;
 	private String stringOne;
 	private String stringTwo;
 	private long longOne;
@@ -47,12 +51,23 @@ public class PrivateFrameReader implements Reader<PrivateFrame> {
 			.addValueRetriever(this::computeRequestConfirmationIsValid)
 			.build();
 	
+	private Reader<FileMessage> fileMessageReader = 
+			SequentialMessageReader
+			.<FileMessage>create()
+			.addPart(stringReader, this::setStringOne)
+			.addPart(stringReader, this::setStringTwo)
+			.addPart(byteBufferReader, this::setBBOne)
+			.addValueRetriever(this::computeFileMessage)
+			.build();
+	
 	private void setStringOne(String string) { stringOne = string; }
 	private void setStringTwo(String string) { stringTwo = string; }
 	private void setLongOne(long longOne) { this.longOne = longOne;}
+	private void setBBOne(ByteBuffer bbOne) {this.bbOne = bbOne;}
 	private PrivateMessage computePrivateMessage() { return new PrivateMessage(stringOne, stringTwo); } // Login + message
 	private ConfirmationPrivateConnection computeConfirmationPrivateConnection() { return new ConfirmationPrivateConnection(stringOne, longOne); }
 	private RequestConfirmationIsValid computeRequestConfirmationIsValid() { return new RequestConfirmationIsValid(stringOne); }
+	private FileMessage computeFileMessage() { return new FileMessage(stringOne, stringTwo, bbOne); } // Login + message
 	
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
@@ -84,6 +99,10 @@ public class PrivateFrameReader implements Reader<PrivateFrame> {
 			}
 			case ChatHackProtocol.OPCODE_CONNECT_ID_PRIVATE_CONNECTION_IS_VALID : {
 				currentFrameReader = requestConfirmationIsValidReader;
+				break;
+			}
+			case ChatHackProtocol.OPCODE_SEND_FILE_MESSAGE : {
+				currentFrameReader = fileMessageReader;
 				break;
 			}
 			default:
@@ -136,6 +155,7 @@ public class PrivateFrameReader implements Reader<PrivateFrame> {
 		privateMessageReader.reset();
 		stringOne = null;
 		stringTwo = null;
+		bbOne = null;
 		frame = null;
 		
 	}

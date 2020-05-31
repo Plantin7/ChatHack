@@ -57,7 +57,6 @@ public class FrameReader implements Reader<PublicFrame> {
 			SequentialMessageReader
 			.<RequestPrivateConnection>create()
 			.addPart(stringReader, this::setStringOne)
-			.addPart(stringReader, this::setStringTwo)
 			.addValueRetriever(this::computeRequestPrivateConnectionMessage)
 			.build();
 	
@@ -113,7 +112,7 @@ public class FrameReader implements Reader<PublicFrame> {
 	private PublicMessage computePublicMessage() { return new PublicMessage(stringOne, stringTwo); } // Login + message
 	private AuthentiticationMessage computeAuthentificationMessage() { return new AuthentiticationMessage(stringOne, stringTwo); } // login + password
 	private AnonymousAuthenticationMessage computeAnonymousAuthenticationMessage() {return new AnonymousAuthenticationMessage(stringOne);}
-	private RequestPrivateConnection computeRequestPrivateConnectionMessage() { return new RequestPrivateConnection(stringOne, stringTwo); }
+	private RequestPrivateConnection computeRequestPrivateConnectionMessage() { return new RequestPrivateConnection(stringOne); }
 	private ErrorPrivateConnection computeErrorPrivateConnectionMessage() { return new ErrorPrivateConnection(stringOne); } 
 	private RefusePrivateConnection computeRefusePrivateConnectionMessage() { return new RefusePrivateConnection(stringOne); } 
 	private AcceptPrivateConnection computeAcceptPrivateConnectionMessage() { return new AcceptPrivateConnection(stringOne, socketAddress, longOne); } 

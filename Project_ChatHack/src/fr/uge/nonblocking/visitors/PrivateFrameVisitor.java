@@ -6,4 +6,5 @@ public interface PrivateFrameVisitor {
 	void visit(PrivateMessage privateMessage);
 	void visit(ConfirmationPrivateConnection confirmationPrivateConnection);
 	void visit(RequestConfirmationIsValid requestConfirmationIsValid);
+	void visit(FileMessage fileMessage);
 }
